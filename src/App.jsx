@@ -1734,10 +1734,27 @@ const HelpModal = ({ onClose }) => (
       </Collapsible>
 
       <Collapsible title="Using This App">
-        <p><strong>Building:</strong> Select sections → Fill in info → Preview → Export to Word (.docx)</p>
-        <p><strong>Cover Letters:</strong> Letter tab → Enter company/position → Choose template → Edit & save</p>
-        <p><strong>ATS Analyzer:</strong> Paste job description in Preview tab to see keyword match score</p>
-        <p style={{ marginBottom: 0 }}><strong>Saving:</strong> Auto-saves to browser. Use Export → Save Data (.json) for backup.</p>
+        <p><strong style={{ color: '#4a90e2' }}>Step 1: Select Sections</strong><br/>
+        On the Build tab, check which sections you want in your resume. Common choices: Contact, Experience, Education, Skills. Add Certifications, Clearances, or References as needed.</p>
+
+        <p><strong style={{ color: '#4a90e2' }}>Step 2: Fill In Your Info</strong><br/>
+        Tap "Start Building" to go through each section. Use the progress bar at top to track where you are. Back/Next buttons navigate between sections.</p>
+
+        <p><strong style={{ color: '#4a90e2' }}>Step 3: Preview & Optimize</strong><br/>
+        Preview tab shows your resume. Tap it to see full-screen. Use the ATS Analyzer below - paste a job description to see which keywords you're missing, then go back and add them.</p>
+
+        <p><strong style={{ color: '#4a90e2' }}>Step 4: Create Cover Letter</strong><br/>
+        Letter tab lets you generate cover letters. Enter company name and position, then pick a template (Professional, Enthusiastic, or Concise). Edit the generated text to personalize it. Toggle Edit/Preview to see formatted letter.</p>
+
+        <p><strong style={{ color: '#4a90e2' }}>Step 5: Export</strong><br/>
+        Export tab has multiple options:<br/>
+        • <strong>Word (.docx)</strong> - Best for job applications and ATS systems<br/>
+        • <strong>PDF</strong> - Opens print dialog, choose "Save as PDF"<br/>
+        • <strong>Plain Text</strong> - For copy-pasting into web forms<br/>
+        • <strong>JSON</strong> - Backup your data to restore later</p>
+
+        <p style={{ marginBottom: 0 }}><strong style={{ color: '#4a90e2' }}>Auto-Save</strong><br/>
+        Your work saves automatically to your browser. To backup or transfer to another device, use Export → Save Data (.json), then Import from File on the new device.</p>
       </Collapsible>
 
       <Collapsible title="Privacy Policy">
