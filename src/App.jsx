@@ -1281,6 +1281,112 @@ const CoverLetterEditor = ({ resumeData, coverLetters, onSave, onDelete }) => {
     alert('Cover letter copied to clipboard!');
   };
 
+  const exportCoverLetterDocx = async () => {
+    if (!content) {
+      alert('Please create a cover letter first');
+      return;
+    }
+    try {
+      const { Document, Packer, Paragraph, TextRun } = await import('docx');
+      const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            // Sender info
+            ...(resumeData.contact?.name ? [
+              new Paragraph({ children: [new TextRun({ text: resumeData.contact.name, bold: true })] }),
+              ...(resumeData.contact.email ? [new Paragraph({ children: [new TextRun(resumeData.contact.email)] })] : []),
+              ...(resumeData.contact.phone ? [new Paragraph({ children: [new TextRun(resumeData.contact.phone)] })] : []),
+              new Paragraph({ children: [] }),
+            ] : []),
+            // Date
+            new Paragraph({ children: [new TextRun(today)] }),
+            new Paragraph({ children: [] }),
+            // Recipient
+            ...(jobInfo.hiringManager ? [new Paragraph({ children: [new TextRun(jobInfo.hiringManager)] })] : []),
+            ...(jobInfo.company ? [new Paragraph({ children: [new TextRun(jobInfo.company)] })] : []),
+            new Paragraph({ children: [] }),
+            // Salutation
+            new Paragraph({ children: [new TextRun(`Dear ${jobInfo.hiringManager || 'Hiring Manager'},`)] }),
+            new Paragraph({ children: [] }),
+            // Body paragraphs
+            ...content.split('\n\n').map(para =>
+              new Paragraph({ children: [new TextRun(para.trim())] })
+            ),
+            new Paragraph({ children: [] }),
+            // Closing
+            new Paragraph({ children: [new TextRun('Sincerely,')] }),
+            new Paragraph({ children: [] }),
+            new Paragraph({ children: [new TextRun({ text: resumeData.contact?.name || '', bold: true })] }),
+          ],
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${letterName || 'cover-letter'}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  const printCoverLetter = () => {
+    if (!content) {
+      alert('Please create a cover letter first');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Cover Letter</title>
+        <style>
+          body { font-family: 'Times New Roman', Georgia, serif; font-size: 12pt; line-height: 1.5; max-width: 7in; margin: 0.5in auto; color: #000; }
+          .sender { margin-bottom: 24pt; }
+          .sender-name { font-weight: bold; }
+          .date { margin-bottom: 24pt; }
+          .recipient { margin-bottom: 24pt; }
+          .salutation { margin-bottom: 12pt; }
+          .body p { margin-bottom: 12pt; text-align: justify; }
+          .closing { margin-top: 24pt; }
+          .signature { margin-top: 36pt; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        ${resumeData.contact?.name ? `
+        <div class="sender">
+          <div class="sender-name">${resumeData.contact.name}</div>
+          ${resumeData.contact.email ? `<div>${resumeData.contact.email}</div>` : ''}
+          ${resumeData.contact.phone ? `<div>${resumeData.contact.phone}</div>` : ''}
+        </div>
+        ` : ''}
+        <div class="date">${today}</div>
+        <div class="recipient">
+          ${jobInfo.hiringManager ? `<div>${jobInfo.hiringManager}</div>` : ''}
+          ${jobInfo.company ? `<div>${jobInfo.company}</div>` : ''}
+        </div>
+        <div class="salutation">Dear ${jobInfo.hiringManager || 'Hiring Manager'},</div>
+        <div class="body">
+          ${content.split('\n\n').map(p => `<p>${p.trim()}</p>`).join('')}
+        </div>
+        <div class="closing">Sincerely,</div>
+        <div class="signature">${resumeData.contact?.name || ''}</div>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   return (
     <>
       <Card style={{ background: 'rgba(74, 144, 226, 0.08)', border: '1px solid rgba(74, 144, 226, 0.2)' }}>
@@ -1428,8 +1534,12 @@ const CoverLetterEditor = ({ resumeData, coverLetters, onSave, onDelete }) => {
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <Button onClick={saveLetter} style={{ flex: 1 }}>Save Letter</Button>
+          <Button onClick={saveLetter} style={{ flex: 1 }}>Save</Button>
           <Button variant="secondary" onClick={copyToClipboard} style={{ flex: 1 }}>Copy</Button>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <Button variant="secondary" onClick={exportCoverLetterDocx} style={{ flex: 1 }}>Word (.docx)</Button>
+          <Button variant="secondary" onClick={printCoverLetter} style={{ flex: 1 }}>PDF (Print)</Button>
         </div>
       </Card>
     </>
