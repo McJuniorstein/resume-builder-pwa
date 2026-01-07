@@ -2298,6 +2298,105 @@ export default function RDResumeBuilder() {
           </button>
         ))}
       </nav>
+
+      {/* Print-only resume - hidden on screen, shown when printing */}
+      <div className="print-only-resume">
+        {data.contact?.name && (
+          <>
+            <h1>{data.contact.name}</h1>
+            <div className="contact-line">
+              {[data.contact.email, data.contact.phone, data.contact.city && data.contact.state ? `${data.contact.city}, ${data.contact.state}` : ''].filter(Boolean).join(' | ')}
+            </div>
+          </>
+        )}
+
+        {sections.summary?.enabled && data.summary && (
+          <>
+            <h2>SUMMARY</h2>
+            <p>{data.summary}</p>
+          </>
+        )}
+
+        {sections.experience?.enabled && data.experience?.length > 0 && (
+          <>
+            <h2>WORK EXPERIENCE</h2>
+            {data.experience.map((exp, i) => (
+              <div key={i} style={{ marginBottom: 12 }}>
+                <div className="job-header">
+                  <span className="job-title">{exp.title}</span>
+                  <span>{exp.startDate} - {exp.current ? 'Present' : exp.endDate}</span>
+                </div>
+                <div>{exp.company}</div>
+                {exp.bullets?.length > 0 && (
+                  <ul>
+                    {exp.bullets.map((b, j) => <li key={j}>{b}</li>)}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </>
+        )}
+
+        {sections.education?.enabled && data.education?.length > 0 && (
+          <>
+            <h2>EDUCATION</h2>
+            {data.education.map((edu, i) => (
+              <div key={i} style={{ marginBottom: 8 }}>
+                <strong>{edu.degree}{edu.field ? ` in ${edu.field}` : ''}</strong> | {edu.school}
+                <div><em>{edu.graduationDate}{edu.gpa ? ` | GPA: ${edu.gpa}` : ''}</em></div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {sections.skills?.enabled && (data.skills?.technical?.length > 0 || data.skills?.soft?.length > 0 || data.skills?.industry?.length > 0) && (
+          <>
+            <h2>SKILLS</h2>
+            {data.skills.technical?.length > 0 && <p><strong>Technical:</strong> {data.skills.technical.join(', ')}</p>}
+            {data.skills.soft?.length > 0 && <p><strong>Soft Skills:</strong> {data.skills.soft.join(', ')}</p>}
+            {data.skills.industry?.length > 0 && <p><strong>Industry:</strong> {data.skills.industry.join(', ')}</p>}
+          </>
+        )}
+
+        {sections.certifications?.enabled && data.certifications?.length > 0 && (
+          <>
+            <h2>CERTIFICATIONS / LICENSES</h2>
+            {data.certifications.map((cert, i) => (
+              <div key={i}>
+                <strong>{cert.name}</strong>
+                {cert.licenseNumber && ` | License #: ${cert.licenseNumber}`}
+                {cert.issuer && ` | ${cert.issuer}`}
+                {cert.date && ` | ${cert.date}`}
+              </div>
+            ))}
+          </>
+        )}
+
+        {sections.clearances?.enabled && data.clearances?.length > 0 && (
+          <>
+            <h2>SECURITY CLEARANCES</h2>
+            {data.clearances.map((cl, i) => (
+              <div key={i}>{cl.level} - {cl.status}{cl.expirationDate ? ` (Expires: ${cl.expirationDate})` : ''}</div>
+            ))}
+          </>
+        )}
+
+        {sections.references?.enabled && (
+          <>
+            <h2>REFERENCES</h2>
+            {data.references?.available ? (
+              <em>Available upon request</em>
+            ) : data.references?.list?.length > 0 ? (
+              data.references.list.map((r, i) => (
+                <div key={i} style={{ marginBottom: 8 }}>
+                  <strong>{r.name}</strong> | {r.title} at {r.company}<br />
+                  {r.phone} | {r.email}
+                </div>
+              ))
+            ) : null}
+          </>
+        )}
+      </div>
     </div>
   );
 }
