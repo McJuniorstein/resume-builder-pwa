@@ -22,12 +22,24 @@ body {
 
 /* Print styles for PDF export */
 @media print {
+  /* Reset page */
+  @page {
+    margin: 0.5in;
+    size: letter;
+  }
+
   /* Hide everything by default */
   body * {
     visibility: hidden;
   }
 
-  /* Reset body for print */
+  /* Reset html/body for print */
+  html, body, #root {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
   body {
     background: white !important;
     margin: 0 !important;
@@ -38,17 +50,14 @@ body {
   .print-only-resume,
   .print-only-resume * {
     visibility: visible !important;
-    display: block !important;
   }
 
   .print-only-resume {
     display: block !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    position: static !important;
     width: 100% !important;
     background: white !important;
-    padding: 0.5in !important;
+    padding: 0 !important;
     margin: 0 !important;
     font-size: 11pt !important;
     line-height: 1.4 !important;
