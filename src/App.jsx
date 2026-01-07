@@ -496,7 +496,7 @@ const SkillsEditor = ({ data, onChange }) => {
       
       {/* Technical Skills */}
       <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Technical Skills</label>
+        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Technical Skills <span style={{ fontWeight: 400, opacity: 0.7 }}>(Python, Excel, CAD, SQL...)</span></label>
         <SkillTags skills={data.technical} category="technical" />
         <div style={{ display: 'flex', gap: 8 }}>
           <input 
@@ -512,7 +512,7 @@ const SkillsEditor = ({ data, onChange }) => {
 
       {/* Soft Skills */}
       <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Soft Skills</label>
+        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Soft Skills <span style={{ fontWeight: 400, opacity: 0.7 }}>(Leadership, Communication, Teamwork...)</span></label>
         <SkillTags skills={data.soft} category="soft" />
         <div style={{ display: 'flex', gap: 8 }}>
           <input 
@@ -528,7 +528,7 @@ const SkillsEditor = ({ data, onChange }) => {
 
       {/* Industry Skills */}
       <div style={{ marginBottom: 8 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Industry-Specific Skills</label>
+        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Industry Skills <span style={{ fontWeight: 400, opacity: 0.7 }}>(FAA Regulations, HIPAA, Agile...)</span></label>
         <SkillTags skills={data.industry} category="industry" />
         <div style={{ display: 'flex', gap: 8 }}>
           <input 
@@ -1100,7 +1100,17 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
         style={{ minHeight: 150 }}
       />
 
-      <Button onClick={analyzeMatch} style={{ marginTop: 8 }}>Analyze Match</Button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <Button onClick={analyzeMatch}>Analyze Match</Button>
+        {(jobDescription || analysis) && (
+          <Button
+            onClick={() => { setJobDescription(''); setAnalysis(null); }}
+            style={{ background: 'rgba(226, 74, 74, 0.2)', flex: 'none' }}
+          >
+            Clear
+          </Button>
+        )}
+      </div>
 
       {analysis && (
         <div style={{ marginTop: 20 }}>
