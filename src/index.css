@@ -22,31 +22,25 @@ body {
 
 /* Print styles for PDF export */
 @media print {
-  /* Reset page */
   @page {
-    margin: 0.5in;
+    margin: 0.4in;
     size: letter;
   }
 
-  /* Hide everything by default */
-  body * {
-    visibility: hidden;
-  }
-
-  /* Reset html/body for print */
-  html, body, #root {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-  }
-
-  body {
-    background: white !important;
+  /* Hide everything */
+  * {
+    visibility: hidden !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
-  /* Show only the print resume */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Show only print resume and its contents */
   .print-only-resume,
   .print-only-resume * {
     visibility: visible !important;
@@ -54,20 +48,24 @@ body {
 
   .print-only-resume {
     display: block !important;
-    position: static !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     width: 100% !important;
     background: white !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    font-family: 'Times New Roman', Georgia, serif !important;
     font-size: 11pt !important;
-    line-height: 1.4 !important;
+    line-height: 1.35 !important;
     color: #000 !important;
+    padding: 0 !important;
   }
 
-  /* Resume content styles for print */
   .print-only-resume h1 {
-    font-size: 18pt !important;
-    margin-bottom: 4pt !important;
+    font-size: 16pt !important;
+    font-weight: bold !important;
+    margin: 0 0 2pt 0 !important;
+    padding: 0 !important;
     text-align: center !important;
   }
 
@@ -75,22 +73,24 @@ body {
     text-align: center !important;
     font-size: 10pt !important;
     color: #333 !important;
-    margin-bottom: 12pt !important;
+    margin: 0 0 8pt 0 !important;
+    padding: 0 !important;
   }
 
   .print-only-resume h2 {
-    font-size: 12pt !important;
+    font-size: 11pt !important;
     font-weight: bold !important;
+    text-transform: uppercase !important;
     border-bottom: 1px solid #000 !important;
-    margin-top: 12pt !important;
-    margin-bottom: 6pt !important;
-    padding-bottom: 2pt !important;
+    margin: 8pt 0 3pt 0 !important;
+    padding: 0 0 1pt 0 !important;
   }
 
   .print-only-resume .job-header {
     display: flex !important;
     justify-content: space-between !important;
-    margin-bottom: 2pt !important;
+    margin: 0 0 1pt 0 !important;
+    padding: 0 !important;
   }
 
   .print-only-resume .job-title {
@@ -98,15 +98,28 @@ body {
   }
 
   .print-only-resume ul {
-    margin-left: 18pt !important;
-    margin-bottom: 6pt !important;
+    margin: 0 0 3pt 14pt !important;
+    padding: 0 !important;
   }
 
   .print-only-resume li {
-    margin-bottom: 2pt !important;
+    margin: 0 0 1pt 0 !important;
+    padding: 0 !important;
   }
 
   .print-only-resume p {
-    margin-bottom: 6pt !important;
+    margin: 0 0 3pt 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-only-resume div {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-only-resume strong,
+  .print-only-resume em {
+    margin: 0 !important;
+    padding: 0 !important;
   }
 }
