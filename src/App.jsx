@@ -1283,40 +1283,41 @@ const CoverLetterEditor = ({ resumeData, coverLetters, onSave, onDelete }) => {
 
   return (
     <>
-      <Card>
-        <SectionTitle>Cover Letters</SectionTitle>
-        <p style={{ color: '#888', fontSize: 14, marginTop: -8, marginBottom: 16 }}>
-          Generate tailored cover letters using your resume data
-        </p>
-
-        {coverLetters.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 8 }}>Saved Letters</label>
-            {coverLetters.map(letter => (
-              <div key={letter.id} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: 12,
-                background: selectedLetter?.id === letter.id ? 'rgba(74, 144, 226, 0.2)' : 'rgba(0,0,0,0.2)',
-                borderRadius: 8,
-                marginBottom: 8,
-                cursor: 'pointer',
-              }} onClick={() => loadLetter(letter)}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: '#fff' }}>{letter.name}</div>
-                  <div style={{ fontSize: 12, color: '#888' }}>{new Date(letter.updatedAt).toLocaleDateString()}</div>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); onDelete(letter.id); }}
-                  style={{ background: 'none', border: 'none', color: '#e24a4a', cursor: 'pointer', fontSize: 18 }}>x</button>
+      <Card style={{ background: 'rgba(74, 144, 226, 0.08)', border: '1px solid rgba(74, 144, 226, 0.2)' }}>
+        <SectionTitle>Saved Cover Letters ({coverLetters.length})</SectionTitle>
+        {coverLetters.length === 0 ? (
+          <p style={{ color: '#888', fontSize: 14, textAlign: 'center', padding: 20 }}>
+            No saved letters yet. Create one below and tap "Save Letter".
+          </p>
+        ) : (
+          coverLetters.map(letter => (
+            <div key={letter.id} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: 12,
+              background: selectedLetter?.id === letter.id ? 'rgba(74, 144, 226, 0.3)' : 'rgba(0,0,0,0.2)',
+              borderRadius: 8,
+              marginBottom: 8,
+              cursor: 'pointer',
+              border: selectedLetter?.id === letter.id ? '1px solid #4a90e2' : '1px solid transparent',
+            }} onClick={() => loadLetter(letter)}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: '#fff' }}>{letter.name}</div>
+                <div style={{ fontSize: 12, color: '#888' }}>{new Date(letter.updatedAt).toLocaleDateString()}</div>
               </div>
-            ))}
-          </div>
+              <button onClick={(e) => { e.stopPropagation(); onDelete(letter.id); }}
+                style={{ background: 'none', border: 'none', color: '#e24a4a', cursor: 'pointer', fontSize: 18, padding: 8 }}>×</button>
+            </div>
+          ))
         )}
       </Card>
 
       <Card>
         <SectionTitle>Job Details</SectionTitle>
+        <p style={{ color: '#888', fontSize: 14, marginTop: -8, marginBottom: 16 }}>
+          Enter details for your cover letter
+        </p>
         <Input label="Company Name" value={jobInfo.company} onChange={e => setJobInfo({ ...jobInfo, company: e.target.value })} placeholder="Acme Corporation" />
         <Input label="Position Title" value={jobInfo.title} onChange={e => setJobInfo({ ...jobInfo, title: e.target.value })} placeholder="Software Engineer" />
         <Input label="Hiring Manager (optional)" value={jobInfo.hiringManager} onChange={e => setJobInfo({ ...jobInfo, hiringManager: e.target.value })} placeholder="Jane Smith" />
