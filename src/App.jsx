@@ -1692,8 +1692,21 @@ const FullscreenPreview = ({ sections, data, onClose }) => (
   </div>
 );
 
+// Collapsible Section Component
+const Collapsible = ({ title, children, defaultOpen = false }) => (
+  <details open={defaultOpen} style={{ marginBottom: 12 }}>
+    <summary style={{ cursor: 'pointer', padding: '12px 16px', background: 'rgba(255,255,255,0.08)', borderRadius: 8, color: '#fff', fontWeight: 500, listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {title}
+      <span style={{ fontSize: 12, opacity: 0.6 }}>tap to expand</span>
+    </summary>
+    <div style={{ padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 8px 8px', marginTop: -4 }}>
+      {children}
+    </div>
+  </details>
+);
+
 // Help Modal Component
-const HelpModal = ({ activeTab, onTabChange, onClose }) => (
+const HelpModal = ({ onClose }) => (
   <div style={{
     position: 'fixed',
     top: 0,
@@ -1705,104 +1718,39 @@ const HelpModal = ({ activeTab, onTabChange, onClose }) => (
     overflow: 'auto',
     padding: '20px',
   }}>
-    <div style={{ maxWidth: 600, margin: '0 auto' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', fontSize: 14, lineHeight: 1.6, color: '#ccc' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 20, color: '#fff' }}>Help & Info</h2>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', width: 40, height: 40, borderRadius: 20, fontSize: 20, cursor: 'pointer' }}>×</button>
       </div>
 
-      {/* Tab buttons */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <button onClick={() => onTabChange('guide')} style={{ flex: 1, padding: 12, background: activeTab === 'guide' ? '#4a90e2' : 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}>Resume Guide</button>
-        <button onClick={() => onTabChange('privacy')} style={{ flex: 1, padding: 12, background: activeTab === 'privacy' ? '#4a90e2' : 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}>Privacy Policy</button>
-      </div>
+      <Collapsible title="Resume Writing Tips" defaultOpen={true}>
+        <p><strong style={{ color: '#4a90e2' }}>1. Tailor for Each Job</strong> - Use keywords from the job description. Our ATS Analyzer helps identify missing keywords.</p>
+        <p><strong style={{ color: '#4a90e2' }}>2. Lead with Action Verbs</strong> - Led, Developed, Implemented, Achieved, Reduced, Increased, Managed, Created.</p>
+        <p><strong style={{ color: '#4a90e2' }}>3. Quantify Achievements</strong> - "Reduced costs by 20%" beats "Reduced costs." Use numbers.</p>
+        <p><strong style={{ color: '#4a90e2' }}>4. Keep it Concise</strong> - One page for &lt;10 years experience. Two pages max for senior roles.</p>
+        <p><strong style={{ color: '#4a90e2' }}>5. ATS-Friendly Format</strong> - Standard headers, no tables/graphics. Our Word export is optimized.</p>
+        <p style={{ marginBottom: 0 }}><strong style={{ color: '#4a90e2' }}>6. Proofread Everything</strong> - Spelling errors are instant disqualifiers.</p>
+      </Collapsible>
 
-      {activeTab === 'guide' && (
-        <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 20, fontSize: 14, lineHeight: 1.7, color: '#ccc' }}>
-          <h3 style={{ color: '#4a90e2', marginTop: 0 }}>Resume Writing Tips</h3>
+      <Collapsible title="Using This App">
+        <p><strong>Building:</strong> Select sections → Fill in info → Preview → Export to Word (.docx)</p>
+        <p><strong>Cover Letters:</strong> Letter tab → Enter company/position → Choose template → Edit & save</p>
+        <p><strong>ATS Analyzer:</strong> Paste job description in Preview tab to see keyword match score</p>
+        <p style={{ marginBottom: 0 }}><strong>Saving:</strong> Auto-saves to browser. Use Export → Save Data (.json) for backup.</p>
+      </Collapsible>
 
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>1. Tailor for Each Job</h4>
-          <p>Customize your resume for each position. Use keywords from the job description. Our ATS Analyzer helps identify missing keywords.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>2. Lead with Action Verbs</h4>
-          <p>Start bullet points with strong verbs: Led, Developed, Implemented, Achieved, Reduced, Increased, Managed, Created.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>3. Quantify Achievements</h4>
-          <p>Use numbers: "Reduced costs by 20%" is stronger than "Reduced costs." Include metrics, percentages, and dollar amounts.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>4. Keep it Concise</h4>
-          <p>One page for less than 10 years experience. Two pages max for senior roles. Remove outdated or irrelevant information.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>5. ATS-Friendly Format</h4>
-          <p>Use standard section headers. Avoid tables, graphics, and columns. Our Word export is optimized for ATS systems.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>6. Proofread Everything</h4>
-          <p>Spelling and grammar errors are instant disqualifiers. Read aloud, use spell check, and have someone else review.</p>
-
-          <h3 style={{ color: '#4a90e2', marginTop: 24 }}>Using This App</h3>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Building Your Resume</h4>
-          <p>1. Select which sections to include<br/>
-          2. Fill in each section with your information<br/>
-          3. Preview your resume and check the ATS score<br/>
-          4. Export to Word (.docx) for job applications</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Cover Letters</h4>
-          <p>Use the Letter tab to generate cover letters. Enter the company and position, then choose a template style. Edit the generated text to personalize it.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Saving Your Work</h4>
-          <p>Your data saves automatically to your browser. Use Export → Save Data (.json) to backup your resume. You can restore from this file anytime.</p>
+      <Collapsible title="Privacy Policy">
+        <div style={{ background: 'rgba(74, 226, 74, 0.1)', padding: 12, borderRadius: 8, marginBottom: 12, border: '1px solid rgba(74, 226, 74, 0.3)' }}>
+          <strong style={{ color: '#4ae24a' }}>We collect ZERO data.</strong>
+          <span style={{ color: '#8be88b' }}> Your info never leaves your device.</span>
         </div>
-      )}
-
-      {activeTab === 'privacy' && (
-        <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 20, fontSize: 14, lineHeight: 1.7, color: '#ccc' }}>
-          <h3 style={{ color: '#4a90e2', marginTop: 0 }}>Privacy Policy</h3>
-          <p style={{ color: '#888', fontSize: 12 }}>Last updated: January 2026</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Summary</h4>
-          <p><strong style={{ color: '#4ae24a' }}>We do not collect, store, or transmit any of your personal data.</strong> Your information never leaves your device.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Data Storage</h4>
-          <p>All resume data, cover letters, and preferences are stored locally in your browser's localStorage. This data:</p>
-          <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-            <li>Stays on your device only</li>
-            <li>Is never sent to any server</li>
-            <li>Is never shared with third parties</li>
-            <li>Can be deleted by clearing your browser data</li>
-          </ul>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>No Tracking</h4>
-          <p>This app does not use:</p>
-          <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-            <li>Analytics or tracking scripts</li>
-            <li>Cookies for tracking purposes</li>
-            <li>Third-party advertising</li>
-            <li>User accounts or authentication</li>
-          </ul>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Offline Functionality</h4>
-          <p>This is a Progressive Web App (PWA) that works offline. Once loaded, no internet connection is required, further ensuring your data stays private.</p>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Your Rights (GDPR/CCPA/PIPEDA)</h4>
-          <p>Since we don't collect your data, there's nothing to request, correct, or delete from our servers. You have complete control over your data on your device.</p>
-          <ul style={{ paddingLeft: 20, margin: '8px 0' }}>
-            <li><strong>Access:</strong> Your data is in your browser's localStorage</li>
-            <li><strong>Export:</strong> Use "Save Data (.json)" to download</li>
-            <li><strong>Delete:</strong> Clear browser data or use "Clear All" in the app</li>
-            <li><strong>Portability:</strong> JSON export works with any system</li>
-          </ul>
-
-          <h4 style={{ color: '#fff', marginBottom: 8 }}>Contact</h4>
-          <p>Questions about this privacy policy? This is an open-source project.</p>
-          <p><a href="https://github.com/McJuniorstein/resume-builder-pwa" target="_blank" rel="noopener noreferrer" style={{ color: '#4a90e2' }}>github.com/McJuniorstein/resume-builder-pwa</a></p>
-
-          <div style={{ marginTop: 20, padding: 16, background: 'rgba(74, 226, 74, 0.1)', borderRadius: 8, border: '1px solid rgba(74, 226, 74, 0.3)' }}>
-            <strong style={{ color: '#4ae24a' }}>Your Privacy Guaranteed</strong>
-            <p style={{ margin: '8px 0 0 0', color: '#8be88b' }}>Zero data collection. Zero tracking. 100% private. Your resume stays yours.</p>
-          </div>
-        </div>
-      )}
+        <p><strong>Storage:</strong> All data stays in your browser's localStorage only.</p>
+        <p><strong>No Tracking:</strong> No analytics, no cookies, no ads, no accounts.</p>
+        <p><strong>Offline:</strong> Works without internet after first load.</p>
+        <p><strong>Your Rights (GDPR/CCPA/PIPEDA):</strong> Nothing to request from us - you control everything locally. Export via JSON, delete via browser settings.</p>
+        <p style={{ marginBottom: 0 }}><strong>Contact:</strong> <a href="https://github.com/McJuniorstein/resume-builder-pwa" target="_blank" rel="noopener noreferrer" style={{ color: '#4a90e2' }}>GitHub</a> | MIT License</p>
+      </Collapsible>
     </div>
   </div>
 );
@@ -2246,7 +2194,7 @@ export default function RDResumeBuilder() {
         >?</button>
       </header>
 
-      {showHelp && <HelpModal activeTab={showHelp} onTabChange={setShowHelp} onClose={() => setShowHelp(null)} />}
+      {showHelp && <HelpModal onClose={() => setShowHelp(null)} />}
 
       <main style={{ padding: 20, maxWidth: 600, margin: '0 auto', paddingBottom: 100 }}>
         {view === 'sections' && (
