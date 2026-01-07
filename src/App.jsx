@@ -1817,7 +1817,26 @@ const Collapsible = ({ title, children, defaultOpen = false }) => (
 );
 
 // Help Modal Component
-const HelpModal = ({ onClose }) => (
+const HelpModal = ({ onClose }) => {
+  const checkForUpdates = async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.update();
+          alert('Checking for updates... If a new version is available, it will load on next refresh.');
+        } else {
+          alert('No service worker found. Try refreshing the page.');
+        }
+      } catch (err) {
+        alert('Update check failed. Try refreshing the page.');
+      }
+    } else {
+      alert('Service workers not supported in this browser.');
+    }
+  };
+
+  return (
   <div style={{
     position: 'fixed',
     top: 0,
@@ -1834,6 +1853,13 @@ const HelpModal = ({ onClose }) => (
         <h2 style={{ margin: 0, fontSize: 20, color: '#fff' }}>Help & Info</h2>
         <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', width: 40, height: 40, borderRadius: 20, fontSize: 20, cursor: 'pointer' }}>×</button>
       </div>
+
+      <button
+        onClick={checkForUpdates}
+        style={{ width: '100%', padding: 12, marginBottom: 16, background: 'rgba(74, 226, 74, 0.15)', border: '1px solid rgba(74, 226, 74, 0.3)', borderRadius: 8, color: '#4ae24a', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+      >
+        🔄 Check for Updates
+      </button>
 
       <Collapsible title="Resume Writing Tips" defaultOpen={true}>
         <p><strong style={{ color: '#4a90e2' }}>1. Tailor for Each Job</strong> - Use keywords from the job description. Our ATS Analyzer helps identify missing keywords.</p>
@@ -1881,7 +1907,8 @@ const HelpModal = ({ onClose }) => (
       </Collapsible>
     </div>
   </div>
-);
+  );
+};
 
 // Main App
 export default function RDResumeBuilder() {
