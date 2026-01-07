@@ -1794,7 +1794,8 @@ const HelpModal = ({ activeTab, onTabChange, onClose }) => (
           </ul>
 
           <h4 style={{ color: '#fff', marginBottom: 8 }}>Contact</h4>
-          <p>Questions about this privacy policy? This is an open-source project. Visit our GitHub repository for more information.</p>
+          <p>Questions about this privacy policy? This is an open-source project.</p>
+          <p><a href="https://github.com/McJuniorstein/resume-builder-pwa" target="_blank" rel="noopener noreferrer" style={{ color: '#4a90e2' }}>github.com/McJuniorstein/resume-builder-pwa</a></p>
 
           <div style={{ marginTop: 20, padding: 16, background: 'rgba(74, 226, 74, 0.1)', borderRadius: 8, border: '1px solid rgba(74, 226, 74, 0.3)' }}>
             <strong style={{ color: '#4ae24a' }}>Your Privacy Guaranteed</strong>

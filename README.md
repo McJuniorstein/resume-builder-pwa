@@ -2,6 +2,16 @@
 
 A mobile-first Progressive Web App for building ATS-optimized resumes. Works offline, installs like a native app, and exports to Word/PDF formats.
 
+## About This Project
+
+**This project is a rapid prototyping demonstration.** It showcases the workflow of using AI tools for fast application development:
+
+1. **Claude Artifact** (claude.ai) - Initial prototype as a single JSX component
+2. **Claude Code** (CLI) - Converted to full Vite/React project, added PWA features, deployed
+3. **Netlify** - Continuous deployment for real-world testing
+
+**Total development time: ~3 hours** while multitasking during normal work activities. The goal was to demonstrate how quickly a functional, deployable web app can be created using Claude as a development partner - from idea to production in a single session.
+
 ## Features
 
 ### Core Resume Builder
