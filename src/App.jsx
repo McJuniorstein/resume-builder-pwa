@@ -1240,6 +1240,7 @@ const CoverLetterEditor = ({ resumeData, coverLetters, onSave, onDelete }) => {
   const [jobInfo, setJobInfo] = useState({ company: '', title: '', hiringManager: '' });
   const [content, setContent] = useState('');
   const [letterName, setLetterName] = useState('');
+  const [viewMode, setViewMode] = useState('edit'); // 'edit' or 'preview'
 
   const generateFromTemplate = (templateKey) => {
     const template = COVER_LETTER_TEMPLATES[templateKey];
@@ -1333,15 +1334,98 @@ const CoverLetterEditor = ({ resumeData, coverLetters, onSave, onDelete }) => {
       </Card>
 
       <Card>
-        <SectionTitle>Cover Letter Content</SectionTitle>
-        <Input label="Letter Name" value={letterName} onChange={e => setLetterName(e.target.value)} placeholder="Acme Corp - Software Engineer" />
-        <TextArea
-          label="Content"
-          value={content}
-          onChange={e => setContent(e.target.value)}
-          placeholder="Write or generate your cover letter..."
-          style={{ minHeight: 300 }}
-        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <SectionTitle style={{ marginBottom: 0 }}>Cover Letter Content</SectionTitle>
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: 8, overflow: 'hidden' }}>
+            <button
+              onClick={() => setViewMode('edit')}
+              style={{
+                padding: '8px 16px',
+                border: 'none',
+                background: viewMode === 'edit' ? '#4a90e2' : 'transparent',
+                color: '#fff',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >Edit</button>
+            <button
+              onClick={() => setViewMode('preview')}
+              style={{
+                padding: '8px 16px',
+                border: 'none',
+                background: viewMode === 'preview' ? '#4a90e2' : 'transparent',
+                color: '#fff',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >Preview</button>
+          </div>
+        </div>
+
+        {viewMode === 'edit' ? (
+          <>
+            <Input label="Letter Name" value={letterName} onChange={e => setLetterName(e.target.value)} placeholder="Acme Corp - Software Engineer" />
+            <TextArea
+              label="Content"
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              placeholder="Write or generate your cover letter..."
+              style={{ minHeight: 300 }}
+            />
+          </>
+        ) : (
+          <div style={{
+            background: '#fff',
+            color: '#000',
+            padding: '48px 40px',
+            borderRadius: 4,
+            minHeight: 400,
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: 14,
+            lineHeight: 1.6,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          }}>
+            {/* Sender Info */}
+            {resumeData.contact && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontWeight: 600 }}>{resumeData.contact.name}</div>
+                {resumeData.contact.email && <div>{resumeData.contact.email}</div>}
+                {resumeData.contact.phone && <div>{resumeData.contact.phone}</div>}
+                {resumeData.contact.location && <div>{resumeData.contact.location}</div>}
+              </div>
+            )}
+
+            {/* Date */}
+            <div style={{ marginBottom: 24 }}>
+              {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+
+            {/* Recipient */}
+            {(jobInfo.hiringManager || jobInfo.company) && (
+              <div style={{ marginBottom: 24 }}>
+                {jobInfo.hiringManager && <div>{jobInfo.hiringManager}</div>}
+                {jobInfo.company && <div>{jobInfo.company}</div>}
+              </div>
+            )}
+
+            {/* Salutation */}
+            <div style={{ marginBottom: 16 }}>
+              Dear {jobInfo.hiringManager || 'Hiring Manager'},
+            </div>
+
+            {/* Body */}
+            <div style={{ whiteSpace: 'pre-wrap', marginBottom: 24 }}>
+              {content || 'Your cover letter content will appear here...'}
+            </div>
+
+            {/* Closing */}
+            <div>
+              <div>Sincerely,</div>
+              <div style={{ marginTop: 24, fontWeight: 600 }}>{resumeData.contact?.name || 'Your Name'}</div>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <Button onClick={saveLetter} style={{ flex: 1 }}>Save Letter</Button>
           <Button variant="secondary" onClick={copyToClipboard} style={{ flex: 1 }}>Copy</Button>
