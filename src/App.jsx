@@ -60,23 +60,28 @@ const DEFAULT_DATA = {
 };
 
 // Reusable Components
-const Input = ({ label, ...props }) => (
+const Input = ({ label, required, error, ...props }) => (
   <div style={{ marginBottom: 16 }}>
-    {label && <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>{label}</label>}
-    <input 
+    {label && (
+      <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>
+        {label}{required && <span style={{ color: '#ff6b6b', marginLeft: 4 }}>*</span>}
+      </label>
+    )}
+    <input
       style={{
         width: '100%',
         padding: '14px 16px',
         fontSize: 16,
         background: 'rgba(0,0,0,0.3)',
-        border: '1px solid rgba(255,255,255,0.1)',
+        border: error ? '1px solid #ff6b6b' : '1px solid rgba(255,255,255,0.1)',
         borderRadius: 10,
         color: '#fff',
         outline: 'none',
         boxSizing: 'border-box',
-      }} 
-      {...props} 
+      }}
+      {...props}
     />
+    {error && <div style={{ color: '#ff6b6b', fontSize: 12, marginTop: 4 }}>{error}</div>}
   </div>
 );
 
@@ -329,18 +334,18 @@ const FormBox = ({ children }) => (
 );
 
 // Section Editors
-const ContactEditor = ({ data, onChange }) => (
+const ContactEditor = ({ data, onChange, errors = {} }) => (
   <Card>
     <SectionTitle>Contact Information</SectionTitle>
-    <Input label="Full Name" value={data.name} onChange={e => onChange({ ...data, name: e.target.value })} placeholder="John Doe" />
-    <Input label="Email" type="email" value={data.email} onChange={e => onChange({ ...data, email: e.target.value })} placeholder="john@email.com" />
+    <Input label="Full Name" required value={data.name} onChange={e => onChange({ ...data, name: e.target.value })} placeholder="John Doe" error={errors.name} />
+    <Input label="Email" required type="email" value={data.email} onChange={e => onChange({ ...data, email: e.target.value })} placeholder="john@email.com" error={errors.email} />
     <Input label="Phone" type="tel" value={data.phone} onChange={e => onChange({ ...data, phone: e.target.value })} placeholder="(555) 123-4567" />
     <div style={{ display: 'flex', gap: 12 }}>
       <div style={{ flex: 1 }}>
-        <Input label="City" value={data.city} onChange={e => onChange({ ...data, city: e.target.value })} placeholder="Tampa" />
+        <Input label="City" required value={data.city} onChange={e => onChange({ ...data, city: e.target.value })} placeholder="Tampa" error={errors.city} />
       </div>
       <div style={{ flex: 1 }}>
-        <Input label="State" value={data.state} onChange={e => onChange({ ...data, state: e.target.value })} placeholder="FL" />
+        <Input label="State" required value={data.state} onChange={e => onChange({ ...data, state: e.target.value })} placeholder="FL" error={errors.state} />
       </div>
     </div>
   </Card>
@@ -463,6 +468,49 @@ const EducationEditor = ({ data, onChange }) => {
   );
 };
 
+// Skill suggestions for autocomplete
+const SKILL_SUGGESTIONS = {
+  technical: [
+    // Languages
+    'Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C#', 'Go', 'Rust', 'PHP', 'Ruby', 'Kotlin', 'Swift',
+    // Web Frameworks
+    'React', 'Vue.js', 'Angular', 'Next.js', 'Node.js', 'Express.js', 'Django', 'FastAPI', 'Spring Boot', 'ASP.NET',
+    // Cloud & DevOps
+    'AWS', 'Azure', 'Google Cloud Platform', 'Docker', 'Kubernetes', 'Terraform', 'CI/CD', 'Jenkins', 'GitHub Actions', 'GitLab CI',
+    // Databases
+    'PostgreSQL', 'MySQL', 'MongoDB', 'Redis', 'Elasticsearch', 'Apache Cassandra', 'DynamoDB', 'SQL',
+    // Big Data & Streaming
+    'Apache Kafka', 'Apache Spark', 'Hadoop', 'Apache Flink',
+    // Other Technical
+    'REST APIs', 'GraphQL', 'Microservices', 'Linux/Unix', 'Git', 'Excel', 'Power BI', 'Tableau', 'MATLAB', 'R',
+    'AutoCAD', 'SolidWorks', 'Figma', 'Adobe Creative Suite', 'Salesforce', 'SAP', 'Jira'
+  ],
+  soft: [
+    'Leadership', 'Team Mentoring', 'Communication', 'Problem Solving', 'Critical Thinking',
+    'Project Management', 'Teamwork', 'Collaboration', 'Agile Methodology', 'Negotiation',
+    'Adaptability', 'Initiative', 'Emotional Intelligence', 'Conflict Resolution', 'Decision Making',
+    'Time Management', 'Attention to Detail', 'Presentation Skills', 'Public Speaking', 'Documentation',
+    'Networking', 'Active Listening', 'Mentorship', 'Coaching', 'Delegation', 'Strategic Planning',
+    'Cross-functional Collaboration', 'Empathy', 'Flexibility', 'Curiosity'
+  ],
+  industry: [
+    // Methodologies
+    'Agile/Scrum', 'Kanban', 'Waterfall', 'Lean', 'Six Sigma',
+    // Architecture & Design
+    'Microservices Architecture', 'System Design', 'Database Design', 'Cloud Architecture', 'Enterprise Architecture', 'Solution Architecture',
+    // Quality & Testing
+    'Test Automation', 'Unit Testing', 'Integration Testing', 'Selenium', 'JUnit', 'PyTest', 'Test-Driven Development', 'Performance Testing',
+    // Specialized
+    'Machine Learning', 'Data Engineering', 'Data Science', 'Business Intelligence', 'Analytics', 'Security',
+    // Compliance & Standards
+    'HIPAA', 'SOC 2', 'GDPR', 'PCI-DSS', 'ISO 27001',
+    // DevOps & Infrastructure
+    'Infrastructure as Code', 'Configuration Management', 'Monitoring', 'Logging', 'Observability', 'Database Administration',
+    // Aviation (placeholder - more to be added)
+    'FAA Regulations', 'Aircraft Maintenance', 'Aviation Safety'
+  ]
+};
+
 // FIXED: Skills editor - no longer uses nested component that causes focus loss
 const SkillsEditor = ({ data, onChange }) => {
   const [techInput, setTechInput] = useState('');
@@ -471,12 +519,34 @@ const SkillsEditor = ({ data, onChange }) => {
 
   const addSkill = (category, value, setValue) => {
     if (!value.trim()) return;
+    // Prevent duplicates
+    if (data[category].some(s => s.toLowerCase() === value.trim().toLowerCase())) return;
     onChange({ ...data, [category]: [...data[category], value.trim()] });
     setValue('');
   };
 
   const removeSkill = (category, idx) => {
     onChange({ ...data, [category]: data[category].filter((_, i) => i !== idx) });
+  };
+
+  // Get filtered suggestions based on input (excluding already added skills)
+  const getFilteredSuggestions = (category, input) => {
+    if (!input.trim()) return [];
+    const existing = data[category].map(s => s.toLowerCase());
+    return SKILL_SUGGESTIONS[category]
+      .filter(skill =>
+        skill.toLowerCase().includes(input.toLowerCase()) &&
+        !existing.includes(skill.toLowerCase())
+      )
+      .slice(0, 5);
+  };
+
+  // Get quick-pick suggestions (not yet added)
+  const getQuickPicks = (category) => {
+    const existing = data[category].map(s => s.toLowerCase());
+    return SKILL_SUGGESTIONS[category]
+      .filter(skill => !existing.includes(skill.toLowerCase()))
+      .slice(0, 6);
   };
 
   const SkillTags = ({ skills, category }) => (
@@ -490,56 +560,96 @@ const SkillsEditor = ({ data, onChange }) => {
     </div>
   );
 
+  const SkillInput = ({ category, input, setInput, placeholder }) => {
+    const suggestions = getFilteredSuggestions(category, input);
+    const quickPicks = input.trim() ? [] : getQuickPicks(category);
+
+    return (
+      <div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill(category, input, setInput); }}}
+            placeholder={placeholder}
+          />
+          <Button small onClick={() => addSkill(category, input, setInput)}>+</Button>
+        </div>
+        {/* Autocomplete suggestions when typing */}
+        {suggestions.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+            {suggestions.map(skill => (
+              <button
+                key={skill}
+                onClick={() => { addSkill(category, skill, setInput); }}
+                style={{
+                  padding: '6px 12px',
+                  background: 'rgba(74, 226, 74, 0.15)',
+                  border: '1px solid rgba(74, 226, 74, 0.3)',
+                  borderRadius: 16,
+                  color: '#7be87b',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                + {skill}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Quick-pick suggestions when input is empty */}
+        {quickPicks.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>Quick add:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {quickPicks.map(skill => (
+                <button
+                  key={skill}
+                  onClick={() => { addSkill(category, skill, setInput); }}
+                  style={{
+                    padding: '5px 10px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 14,
+                    color: '#888',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Card>
       <SectionTitle>Skills</SectionTitle>
-      
+
       {/* Technical Skills */}
       <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Technical Skills <span style={{ fontWeight: 400, opacity: 0.7 }}>(Python, Excel, CAD, SQL...)</span></label>
+        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Technical Skills</label>
         <SkillTags skills={data.technical} category="technical" />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input 
-            style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
-            value={techInput}
-            onChange={e => setTechInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill('technical', techInput, setTechInput); }}}
-            placeholder="Add technical skill..."
-          />
-          <Button small onClick={() => addSkill('technical', techInput, setTechInput)}>+</Button>
-        </div>
+        <SkillInput category="technical" input={techInput} setInput={setTechInput} placeholder="Type or pick a skill..." />
       </div>
 
       {/* Soft Skills */}
       <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Soft Skills <span style={{ fontWeight: 400, opacity: 0.7 }}>(Leadership, Communication, Teamwork...)</span></label>
+        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Soft Skills</label>
         <SkillTags skills={data.soft} category="soft" />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input 
-            style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
-            value={softInput}
-            onChange={e => setSoftInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill('soft', softInput, setSoftInput); }}}
-            placeholder="Add soft skill..."
-          />
-          <Button small onClick={() => addSkill('soft', softInput, setSoftInput)}>+</Button>
-        </div>
+        <SkillInput category="soft" input={softInput} setInput={setSoftInput} placeholder="Type or pick a skill..." />
       </div>
 
       {/* Industry Skills */}
       <div style={{ marginBottom: 8 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Industry Skills <span style={{ fontWeight: 400, opacity: 0.7 }}>(FAA Regulations, HIPAA, Agile...)</span></label>
+        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Industry / Domain Skills</label>
         <SkillTags skills={data.industry} category="industry" />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input 
-            style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
-            value={industryInput}
-            onChange={e => setIndustryInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addSkill('industry', industryInput, setIndustryInput); }}}
-            placeholder="Add industry skill..."
-          />
-          <Button small onClick={() => addSkill('industry', industryInput, setIndustryInput)}>+</Button>
-        </div>
+        <SkillInput category="industry" input={industryInput} setInput={setIndustryInput} placeholder="Type or pick a skill..." />
       </div>
     </Card>
   );
@@ -1034,6 +1144,22 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
       .map(([word]) => word);
   };
 
+  // Get text for each section separately
+  const getSectionTexts = () => ({
+    summary: resumeData.summary || '',
+    experience: (resumeData.experience || []).map(exp =>
+      [exp.title, exp.company, ...(exp.bullets || [])].join(' ')
+    ).join(' '),
+    education: (resumeData.education || []).map(edu =>
+      [edu.degree, edu.field, edu.school].join(' ')
+    ).join(' '),
+    skills: [
+      ...(resumeData.skills?.technical || []),
+      ...(resumeData.skills?.soft || []),
+      ...(resumeData.skills?.industry || [])
+    ].join(' '),
+  });
+
   // Get resume text
   const getResumeText = () => {
     const parts = [];
@@ -1060,17 +1186,26 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
     return parts.join(' ');
   };
 
+  // Calculate match score for a section
+  const calcSectionScore = (sectionText, jobKeywords) => {
+    if (!sectionText || jobKeywords.length === 0) return 0;
+    const text = sectionText.toLowerCase();
+    const matched = jobKeywords.filter(kw => text.includes(kw));
+    return Math.round((matched.length / jobKeywords.length) * 100);
+  };
+
   const analyzeMatch = () => {
     if (!jobDescription.trim()) return;
 
-    const jobKeywords = extractKeywords(jobDescription);
+    const jobKeywords = extractKeywords(jobDescription).slice(0, 50);
     const resumeText = getResumeText().toLowerCase();
     const resumeKeywords = new Set(extractKeywords(resumeText));
+    const sectionTexts = getSectionTexts();
 
     const matched = [];
     const missing = [];
 
-    jobKeywords.slice(0, 50).forEach(keyword => {
+    jobKeywords.forEach(keyword => {
       if (resumeText.includes(keyword) || resumeKeywords.has(keyword)) {
         matched.push(keyword);
       } else {
@@ -1079,10 +1214,31 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
     });
 
     const score = jobKeywords.length > 0
-      ? Math.round((matched.length / Math.min(jobKeywords.length, 50)) * 100)
+      ? Math.round((matched.length / jobKeywords.length) * 100)
       : 0;
 
-    setAnalysis({ score, matched, missing: missing.slice(0, 20), total: jobKeywords.length });
+    // Calculate per-section scores
+    const sectionScores = {
+      summary: calcSectionScore(sectionTexts.summary, jobKeywords),
+      experience: calcSectionScore(sectionTexts.experience, jobKeywords),
+      education: calcSectionScore(sectionTexts.education, jobKeywords),
+      skills: calcSectionScore(sectionTexts.skills, jobKeywords),
+    };
+
+    // Find lowest scoring section (only non-empty sections)
+    const scoredSections = Object.entries(sectionScores)
+      .filter(([key]) => {
+        if (key === 'summary') return !!resumeData.summary;
+        if (key === 'experience') return resumeData.experience?.length > 0;
+        if (key === 'education') return resumeData.education?.length > 0;
+        if (key === 'skills') return (resumeData.skills?.technical?.length || resumeData.skills?.soft?.length || resumeData.skills?.industry?.length);
+        return false;
+      });
+    const lowestSection = scoredSections.length > 0
+      ? scoredSections.reduce((a, b) => a[1] < b[1] ? a : b)[0]
+      : null;
+
+    setAnalysis({ score, matched, missing: missing.slice(0, 20), total: jobKeywords.length, sectionScores, lowestSection });
   };
 
   return (
@@ -1134,6 +1290,36 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
             <div style={{ color: '#888', fontSize: 14 }}>Keyword Match Score</div>
           </div>
 
+          {/* Section Breakdown */}
+          {analysis.sectionScores && (
+            <div style={{ marginBottom: 16, padding: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 12 }}>Score by Section</div>
+              {[
+                { key: 'summary', label: 'Summary' },
+                { key: 'experience', label: 'Experience' },
+                { key: 'education', label: 'Education' },
+                { key: 'skills', label: 'Skills' },
+              ].map(({ key, label }) => {
+                const sectionScore = analysis.sectionScores[key];
+                const barColor = sectionScore >= 50 ? '#4ae24a' : sectionScore >= 25 ? '#e2b44a' : '#e24a4a';
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                    <div style={{ width: 80, fontSize: 13, color: '#aaa' }}>{label}</div>
+                    <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ width: `${sectionScore}%`, height: '100%', background: barColor, borderRadius: 4, transition: 'width 0.3s' }} />
+                    </div>
+                    <div style={{ width: 36, fontSize: 12, color: barColor, textAlign: 'right' }}>{sectionScore}%</div>
+                  </div>
+                );
+              })}
+              {analysis.lowestSection && (
+                <div style={{ marginTop: 12, padding: 10, background: 'rgba(226, 180, 74, 0.1)', borderRadius: 8, fontSize: 13, color: '#e2b44a' }}>
+                  <strong>Tip:</strong> Your <strong style={{ textTransform: 'capitalize' }}>{analysis.lowestSection}</strong> section has the fewest keyword matches. Consider adding more relevant terms there.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Matched keywords */}
           {analysis.matched.length > 0 && (
             <div style={{ marginBottom: 16 }}>
@@ -1180,12 +1366,11 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
 };
 
 // Cover Letter Templates
+// Note: Templates generate body content only. Greeting and closing are added by preview/export functions.
 const COVER_LETTER_TEMPLATES = {
   professional: {
     name: 'Professional',
-    generate: (data, job) => `Dear Hiring Manager,
-
-I am writing to express my strong interest in the ${job.title || '[Position]'} position at ${job.company || '[Company]'}. With my background in ${data.experience?.[0]?.title || '[your field]'} and proven track record of success, I am confident I would be a valuable addition to your team.
+    generate: (data, job) => `I am writing to express my strong interest in the ${job.title || '[Position]'} position at ${job.company || '[Company]'}. With my background as a ${data.experience?.[0]?.title || '[your field]'} and proven track record of success, I am confident I would be a valuable addition to your team.
 
 ${data.experience?.[0] ? `In my role as ${data.experience[0].title} at ${data.experience[0].company}, I ${data.experience[0].bullets?.[0]?.toLowerCase() || 'contributed significantly to the organization'}.` : 'Throughout my career, I have developed strong skills that align with this position.'}
 
@@ -1193,33 +1378,21 @@ ${data.skills?.technical?.length ? `My technical expertise includes ${data.skill
 
 I am excited about the opportunity to bring my skills and experience to ${job.company || 'your organization'}. I would welcome the chance to discuss how I can contribute to your team's success.
 
-Thank you for considering my application.
-
-Sincerely,
-${data.contact?.name || '[Your Name]'}`
+Thank you for considering my application.`
   },
   enthusiastic: {
     name: 'Enthusiastic',
-    generate: (data, job) => `Dear ${job.hiringManager || 'Hiring Team'},
+    generate: (data, job) => `I was thrilled to discover the ${job.title || '[Position]'} opening at ${job.company || '[Company]'}! This role perfectly matches my passion for ${data.experience?.[0]?.title?.toLowerCase() || 'this field'} and my career aspirations.
 
-I was thrilled to discover the ${job.title || '[Position]'} opening at ${job.company || '[Company]'}! This role perfectly matches my passion for ${data.experience?.[0]?.title?.toLowerCase() || 'this field'} and my career aspirations.
-
-${data.summary ? data.summary : `With experience as ${data.experience?.[0]?.title || 'a professional'}, I bring both expertise and enthusiasm to every project I undertake.`}
+${data.summary ? data.summary : `With experience as a ${data.experience?.[0]?.title || 'professional'}, I bring both expertise and enthusiasm to every project I undertake.`}
 
 What excites me most about this opportunity is the chance to contribute to ${job.company || 'an innovative organization'} while continuing to grow professionally. ${data.skills?.technical?.length ? `I am particularly eager to apply my skills in ${data.skills.technical.slice(0, 3).join(' and ')}.` : ''}
 
-I would love the opportunity to discuss how my background and drive can benefit your team. Thank you for your time and consideration!
-
-Best regards,
-${data.contact?.name || '[Your Name]'}
-${data.contact?.email || ''}
-${data.contact?.phone || ''}`
+I would love the opportunity to discuss how my background and drive can benefit your team. Thank you for your time and consideration!`
   },
   concise: {
     name: 'Concise',
-    generate: (data, job) => `Dear Hiring Manager,
-
-I am applying for the ${job.title || '[Position]'} role at ${job.company || '[Company]'}.
+    generate: (data, job) => `I am applying for the ${job.title || '[Position]'} role at ${job.company || '[Company]'}.
 
 Key qualifications:
 ${data.experience?.[0] ? `• ${data.experience[0].title} at ${data.experience[0].company}` : '• Relevant professional experience'}
@@ -1227,10 +1400,7 @@ ${data.education?.[0] ? `• ${data.education[0].degree} from ${data.education[0
 ${data.skills?.technical?.length ? `• Skills: ${data.skills.technical.slice(0, 4).join(', ')}` : ''}
 ${data.certifications?.[0] ? `• ${data.certifications[0].name}` : ''}
 
-I am available for an interview at your convenience.
-
-${data.contact?.name || '[Your Name]'}
-${data.contact?.phone || ''} | ${data.contact?.email || ''}`
+I am available for an interview at your convenience.`
   }
 };
 
@@ -1905,6 +2075,30 @@ const HelpModal = ({ onClose }) => {
         <p><strong>Your Rights (GDPR/CCPA/PIPEDA):</strong> Nothing to request from us - you control everything locally. Export via JSON, delete via browser settings.</p>
         <p style={{ marginBottom: 0 }}><strong>Contact:</strong> <a href="https://github.com/McJuniorstein/resume-builder-pwa" target="_blank" rel="noopener noreferrer" style={{ color: '#4a90e2' }}>GitHub</a> | MIT License</p>
       </Collapsible>
+
+      <Collapsible title="Changelog">
+        <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
+          <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.3.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Form validation for required contact fields<br/>
+            • Skill suggestions with 115+ keywords and quick-pick buttons<br/>
+            • ATS Analyzer section breakdown with per-section scores<br/>
+            • Auto-save indicator shows when data is saved
+          </p>
+          <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.2.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Cover letter generator with templates<br/>
+            • Cover letter export (Word & PDF)<br/>
+            • Check for Updates button
+          </p>
+          <p style={{ marginBottom: 0 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.1.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • ATS keyword analyzer<br/>
+            • PDF print with optimized margins<br/>
+            • Word (.docx) and plain text export
+          </p>
+        </div>
+      </Collapsible>
     </div>
   </div>
   );
@@ -1924,6 +2118,21 @@ export default function RDResumeBuilder() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [coverLetters, setCoverLetters] = useState([]);
   const [showHelp, setShowHelp] = useState(null); // null, 'guide', or 'privacy'
+  const [contactErrors, setContactErrors] = useState({});
+  const [lastSaved, setLastSaved] = useState(null);
+  const [saveVisible, setSaveVisible] = useState(false);
+
+  // Validate contact info before proceeding
+  const validateContact = () => {
+    const errors = {};
+    const contact = data.contact || {};
+    if (!contact.name?.trim()) errors.name = 'Full name is required';
+    if (!contact.email?.trim()) errors.email = 'Email is required';
+    if (!contact.city?.trim()) errors.city = 'City is required';
+    if (!contact.state?.trim()) errors.state = 'State is required';
+    setContactErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Load from localStorage
   useEffect(() => {
@@ -1939,10 +2148,23 @@ export default function RDResumeBuilder() {
     }
   }, []);
 
-  // Save to localStorage
+  // Save to localStorage with indicator
   useEffect(() => {
+    // Skip initial render (data loaded from storage)
+    const isInitialLoad = !lastSaved && !saveVisible;
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ sections, data }));
+
+      // Only show indicator after initial load
+      if (!isInitialLoad || lastSaved) {
+        setLastSaved(new Date());
+        setSaveVisible(true);
+
+        // Hide indicator after 2 seconds
+        const timer = setTimeout(() => setSaveVisible(false), 2000);
+        return () => clearTimeout(timer);
+      }
     } catch (e) {
       console.error('Failed to save data:', e);
     }
@@ -2316,7 +2538,7 @@ export default function RDResumeBuilder() {
     if (!key) return null;
     
     switch (key) {
-      case 'contact': return <ContactEditor data={data.contact} onChange={v => updateData('contact', v)} />;
+      case 'contact': return <ContactEditor data={data.contact} onChange={v => updateData('contact', v)} errors={contactErrors} />;
       case 'summary': return <SummaryEditor data={data.summary} onChange={v => updateData('summary', v)} />;
       case 'experience': return <ExperienceEditor data={data.experience} onChange={v => updateData('experience', v)} />;
       case 'education': return <EducationEditor data={data.education} onChange={v => updateData('education', v)} />;
@@ -2403,7 +2625,18 @@ export default function RDResumeBuilder() {
             {renderEditor()}
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
               <Button variant="secondary" style={{ flex: 1 }} onClick={() => currentSection === 0 ? setView('sections') : setCurrentSection(p => p - 1)}>← Back</Button>
-              <Button style={{ flex: 1 }} onClick={() => currentSection === enabledSections.length - 1 ? setView('preview') : setCurrentSection(p => p + 1)}>
+              <Button style={{ flex: 1 }} onClick={() => {
+                // Validate contact section before proceeding
+                if (enabledSections[currentSection] === 'contact' && !validateContact()) {
+                  return; // Don't proceed if validation fails
+                }
+                setContactErrors({}); // Clear errors when moving away
+                if (currentSection === enabledSections.length - 1) {
+                  setView('preview');
+                } else {
+                  setCurrentSection(p => p + 1);
+                }
+              }}>
                 {currentSection === enabledSections.length - 1 ? 'Preview' : 'Next →'}
               </Button>
             </div>
@@ -2513,6 +2746,28 @@ export default function RDResumeBuilder() {
 
       {showInstallBanner && (
         <InstallBanner onInstall={handleInstall} onDismiss={dismissInstallBanner} />
+      )}
+
+      {/* Auto-save indicator */}
+      {saveVisible && (
+        <div style={{
+          position: 'fixed',
+          bottom: 70,
+          right: 16,
+          background: 'rgba(0, 0, 0, 0.85)',
+          color: '#4ae24a',
+          padding: '8px 14px',
+          borderRadius: 20,
+          fontSize: 12,
+          zIndex: 99,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          animation: 'fadeIn 0.2s ease',
+        }}>
+          <span style={{ fontSize: 14 }}>✓</span> Saved
+        </div>
       )}
 
       <nav style={{ display: 'flex', justifyContent: 'space-around', padding: '12px 20px', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(255,255,255,0.1)', position: 'fixed', bottom: 0, left: 0, right: 0 }}>
