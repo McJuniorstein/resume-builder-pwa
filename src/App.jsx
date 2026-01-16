@@ -511,7 +511,7 @@ const SKILL_SUGGESTIONS = {
   ]
 };
 
-// FIXED: Skills editor - no longer uses nested component that causes focus loss
+// FIXED: Skills editor - inlined JSX to prevent nested component re-creation causing input loss
 const SkillsEditor = ({ data, onChange }) => {
   const [techInput, setTechInput] = useState('');
   const [softInput, setSoftInput] = useState('');
@@ -549,7 +549,8 @@ const SkillsEditor = ({ data, onChange }) => {
       .slice(0, 6);
   };
 
-  const SkillTags = ({ skills, category }) => (
+  // Render skill tags for a category
+  const renderSkillTags = (skills, category) => (
     <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: 8, minHeight: 20 }}>
       {skills.map((skill, idx) => (
         <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 12px', background: 'rgba(74, 144, 226, 0.2)', borderRadius: 20, fontSize: 14, margin: 4, color: '#8bb8e8' }}>
@@ -560,7 +561,8 @@ const SkillsEditor = ({ data, onChange }) => {
     </div>
   );
 
-  const SkillInput = ({ category, input, setInput, placeholder }) => {
+  // Render skill input for a category (inlined to prevent re-creation)
+  const renderSkillInput = (category, input, setInput, placeholder) => {
     const suggestions = getFilteredSuggestions(category, input);
     const quickPicks = input.trim() ? [] : getQuickPicks(category);
 
@@ -634,22 +636,22 @@ const SkillsEditor = ({ data, onChange }) => {
       {/* Technical Skills */}
       <div style={{ marginBottom: 24 }}>
         <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Technical Skills</label>
-        <SkillTags skills={data.technical} category="technical" />
-        <SkillInput category="technical" input={techInput} setInput={setTechInput} placeholder="Type or pick a skill..." />
+        {renderSkillTags(data.technical, 'technical')}
+        {renderSkillInput('technical', techInput, setTechInput, 'Type or pick a skill...')}
       </div>
 
       {/* Soft Skills */}
       <div style={{ marginBottom: 24 }}>
         <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Soft Skills</label>
-        <SkillTags skills={data.soft} category="soft" />
-        <SkillInput category="soft" input={softInput} setInput={setSoftInput} placeholder="Type or pick a skill..." />
+        {renderSkillTags(data.soft, 'soft')}
+        {renderSkillInput('soft', softInput, setSoftInput, 'Type or pick a skill...')}
       </div>
 
       {/* Industry Skills */}
       <div style={{ marginBottom: 8 }}>
         <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Industry / Domain Skills</label>
-        <SkillTags skills={data.industry} category="industry" />
-        <SkillInput category="industry" input={industryInput} setInput={setIndustryInput} placeholder="Type or pick a skill..." />
+        {renderSkillTags(data.industry, 'industry')}
+        {renderSkillInput('industry', industryInput, setIndustryInput, 'Type or pick a skill...')}
       </div>
     </Card>
   );
@@ -1194,10 +1196,62 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
     return Math.round((matched.length / jobKeywords.length) * 100);
   };
 
+  // Calculate skills-specific score with better algorithm
+  const calcSkillsScore = (skills, jobKeywords, jobDescLower) => {
+    if (!skills || jobKeywords.length === 0) return 0;
+
+    const allSkills = [
+      ...(skills.technical || []),
+      ...(skills.soft || []),
+      ...(skills.industry || [])
+    ];
+
+    if (allSkills.length === 0) return 0;
+
+    let matchedSkills = 0;
+    let totalRelevantKeywords = 0;
+
+    // Method 1: Check how many of user's skills appear in job description
+    allSkills.forEach(skill => {
+      const skillLower = skill.toLowerCase();
+      // Check if skill or any word in skill appears in job description
+      if (jobDescLower.includes(skillLower)) {
+        matchedSkills++;
+      } else {
+        // For multi-word skills, check individual words
+        const words = skillLower.split(/[\s\/\-]+/).filter(w => w.length > 2);
+        if (words.some(w => jobDescLower.includes(w))) {
+          matchedSkills += 0.5; // Partial match
+        }
+      }
+    });
+
+    // Method 2: Check how many job keywords match user's skills
+    const skillsTextLower = allSkills.join(' ').toLowerCase();
+    const skillWords = new Set(skillsTextLower.split(/[\s\/\-]+/).filter(w => w.length > 2));
+
+    jobKeywords.forEach(kw => {
+      // Count keyword as "relevant to skills" if it could be a skill
+      // (not a common verb, not too generic)
+      const isLikelySkill = !STOP_WORDS.has(kw) && kw.length > 2;
+      if (isLikelySkill && (skillsTextLower.includes(kw) || skillWords.has(kw))) {
+        totalRelevantKeywords++;
+      }
+    });
+
+    // Combine both methods for a balanced score
+    // Score = (matched skills / total skills) * 50 + (relevant keyword matches / 20) * 50
+    const skillCoverage = (matchedSkills / allSkills.length) * 50;
+    const keywordCoverage = Math.min((totalRelevantKeywords / 10) * 50, 50); // Cap at 50%
+
+    return Math.round(skillCoverage + keywordCoverage);
+  };
+
   const analyzeMatch = () => {
     if (!jobDescription.trim()) return;
 
     const jobKeywords = extractKeywords(jobDescription).slice(0, 50);
+    const jobDescLower = jobDescription.toLowerCase();
     const resumeText = getResumeText().toLowerCase();
     const resumeKeywords = new Set(extractKeywords(resumeText));
     const sectionTexts = getSectionTexts();
@@ -1217,12 +1271,12 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
       ? Math.round((matched.length / jobKeywords.length) * 100)
       : 0;
 
-    // Calculate per-section scores
+    // Calculate per-section scores (use improved algorithm for skills)
     const sectionScores = {
       summary: calcSectionScore(sectionTexts.summary, jobKeywords),
       experience: calcSectionScore(sectionTexts.experience, jobKeywords),
       education: calcSectionScore(sectionTexts.education, jobKeywords),
-      skills: calcSectionScore(sectionTexts.skills, jobKeywords),
+      skills: calcSkillsScore(resumeData.skills, jobKeywords, jobDescLower),
     };
 
     // Find lowest scoring section (only non-empty sections)
@@ -1986,6 +2040,96 @@ const Collapsible = ({ title, children, defaultOpen = false }) => (
   </details>
 );
 
+// Welcome Back Modal - prompt user about saved data
+const WelcomeBackModal = ({ savedData, onContinue, onStartFresh }) => {
+  const contactName = savedData?.data?.contact?.name;
+  const expCount = savedData?.data?.experience?.length || 0;
+  const skillCount = (savedData?.data?.skills?.technical?.length || 0) +
+                     (savedData?.data?.skills?.soft?.length || 0) +
+                     (savedData?.data?.skills?.industry?.length || 0);
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.85)',
+      zIndex: 1000,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 20,
+    }}>
+      <div style={{
+        background: '#1a1a2e',
+        borderRadius: 16,
+        maxWidth: 400,
+        width: '100%',
+        padding: 24,
+        border: '1px solid rgba(74, 144, 226, 0.3)',
+      }}>
+        <h2 style={{ margin: '0 0 16px 0', color: '#fff', fontSize: 22 }}>Welcome Back!</h2>
+        <p style={{ color: '#aaa', fontSize: 14, marginBottom: 16 }}>
+          We found a previously saved resume. Would you like to continue where you left off?
+        </p>
+
+        {/* Summary of saved data */}
+        <div style={{
+          background: 'rgba(74, 144, 226, 0.1)',
+          borderRadius: 10,
+          padding: 12,
+          marginBottom: 20,
+          border: '1px solid rgba(74, 144, 226, 0.2)'
+        }}>
+          <div style={{ fontSize: 13, color: '#8bb8e8', marginBottom: 8 }}>Saved resume contains:</div>
+          <ul style={{ margin: 0, paddingLeft: 20, color: '#ccc', fontSize: 13 }}>
+            {contactName && <li>Name: {contactName}</li>}
+            {expCount > 0 && <li>{expCount} work experience{expCount > 1 ? 's' : ''}</li>}
+            {skillCount > 0 && <li>{skillCount} skill{skillCount > 1 ? 's' : ''}</li>}
+          </ul>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={onStartFresh}
+            style={{
+              flex: 1,
+              padding: '14px 20px',
+              background: 'rgba(226, 74, 74, 0.2)',
+              border: '1px solid rgba(226, 74, 74, 0.3)',
+              borderRadius: 10,
+              color: '#e88b8b',
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Start Fresh
+          </button>
+          <button
+            onClick={onContinue}
+            style={{
+              flex: 1,
+              padding: '14px 20px',
+              background: 'linear-gradient(135deg, #4a90e2, #357abd)',
+              border: 'none',
+              borderRadius: 10,
+              color: '#fff',
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Help Modal Component
 const HelpModal = ({ onClose }) => {
   const checkForUpdates = async () => {
@@ -2121,6 +2265,8 @@ export default function RDResumeBuilder() {
   const [contactErrors, setContactErrors] = useState({});
   const [lastSaved, setLastSaved] = useState(null);
   const [saveVisible, setSaveVisible] = useState(false);
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const [pendingSavedData, setPendingSavedData] = useState(null);
 
   // Validate contact info before proceeding
   const validateContact = () => {
@@ -2134,19 +2280,69 @@ export default function RDResumeBuilder() {
     return Object.keys(errors).length === 0;
   };
 
-  // Load from localStorage
+  // Check if saved data has meaningful content
+  const hasMeaningfulData = (savedData) => {
+    if (!savedData?.data) return false;
+    const d = savedData.data;
+    return (
+      d.contact?.name?.trim() ||
+      d.contact?.email?.trim() ||
+      d.summary?.trim() ||
+      d.experience?.length > 0 ||
+      d.education?.length > 0 ||
+      d.skills?.technical?.length > 0 ||
+      d.skills?.soft?.length > 0 ||
+      d.skills?.industry?.length > 0 ||
+      d.certifications?.length > 0
+    );
+  };
+
+  // Load from localStorage - show prompt if data exists
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.sections) setSections(prev => ({ ...prev, ...parsed.sections }));
-        if (parsed.data) setData(prev => ({ ...prev, ...parsed.data }));
+        // Only show welcome back if there's meaningful data
+        if (hasMeaningfulData(parsed)) {
+          setPendingSavedData(parsed);
+          setShowWelcomeBack(true);
+        }
       }
     } catch (e) {
       console.error('Failed to load saved data:', e);
     }
   }, []);
+
+  // Handle continuing with saved data
+  const handleContinueWithSaved = () => {
+    if (pendingSavedData) {
+      if (pendingSavedData.sections) setSections(prev => ({ ...prev, ...pendingSavedData.sections }));
+      if (pendingSavedData.data) setData(prev => ({ ...prev, ...pendingSavedData.data }));
+    }
+    setPendingSavedData(null);
+    setShowWelcomeBack(false);
+  };
+
+  // Handle starting fresh
+  const handleStartFresh = () => {
+    setSections(DEFAULT_SECTIONS);
+    setData(DEFAULT_DATA);
+    setPendingSavedData(null);
+    setShowWelcomeBack(false);
+    // Clear localStorage
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  // Clear all data (for Start Fresh button)
+  const clearAllData = () => {
+    if (confirm('Clear all resume data and start fresh? This cannot be undone.')) {
+      setSections(DEFAULT_SECTIONS);
+      setData(DEFAULT_DATA);
+      setCurrentSection(0);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  };
 
   // Save to localStorage with indicator
   useEffect(() => {
@@ -2572,6 +2768,13 @@ export default function RDResumeBuilder() {
       </header>
 
       {showHelp && <HelpModal onClose={() => setShowHelp(null)} />}
+      {showWelcomeBack && pendingSavedData && (
+        <WelcomeBackModal
+          savedData={pendingSavedData}
+          onContinue={handleContinueWithSaved}
+          onStartFresh={handleStartFresh}
+        />
+      )}
 
       <main style={{ padding: 20, maxWidth: 600, margin: '0 auto', paddingBottom: 100 }}>
         {view === 'sections' && (
@@ -2602,6 +2805,9 @@ export default function RDResumeBuilder() {
               <input type="file" id="importInput" accept=".json" onChange={importJson} style={{ display: 'none' }} />
               <Button variant="secondary" onClick={() => setShowDeviceStorage(true)}>
                 Load from Device Storage {savedFiles.length > 0 && `(${savedFiles.length})`}
+              </Button>
+              <Button variant="danger" onClick={clearAllData}>
+                Clear All Data
               </Button>
             </div>
             {showDeviceStorage && <DeviceStoragePanel files={savedFiles} onLoad={loadFromDevice} onDelete={deleteFromDevice} onClear={clearDeviceStorage} onClose={() => setShowDeviceStorage(false)} />}
