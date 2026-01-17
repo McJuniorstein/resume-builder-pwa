@@ -511,44 +511,24 @@ const SKILL_SUGGESTIONS = {
   ]
 };
 
-// FIXED: Skills editor - using refs to avoid stale closure issues with input values
+// Skills editor - stable component structure to prevent focus loss
 const SkillsEditor = ({ data, onChange }) => {
   const [techInput, setTechInput] = useState('');
   const [softInput, setSoftInput] = useState('');
   const [industryInput, setIndustryInput] = useState('');
 
-  // Refs to store current input values - avoids stale closure issues
-  const techInputRef = React.useRef('');
-  const softInputRef = React.useRef('');
-  const industryInputRef = React.useRef('');
-
-  // Keep refs in sync with state
-  techInputRef.current = techInput;
-  softInputRef.current = softInput;
-  industryInputRef.current = industryInput;
-
-  const addSkillFromRef = (category, inputRef, setInput) => {
-    const value = inputRef.current;
-    if (!value.trim()) return;
-    // Prevent duplicates
-    if (data[category].some(s => s.toLowerCase() === value.trim().toLowerCase())) return;
-    onChange({ ...data, [category]: [...data[category], value.trim()] });
-    setInput('');
-  };
-
-  // For suggestion clicks where we know the exact value
-  const addSkillDirect = (category, value, setInput) => {
-    if (!value.trim()) return;
-    if (data[category].some(s => s.toLowerCase() === value.trim().toLowerCase())) return;
-    onChange({ ...data, [category]: [...data[category], value.trim()] });
-    setInput('');
+  const addSkill = (category, value, clearInput) => {
+    const trimmed = (value || '').trim();
+    if (!trimmed) return;
+    if (data[category].some(s => s.toLowerCase() === trimmed.toLowerCase())) return;
+    onChange({ ...data, [category]: [...data[category], trimmed] });
+    clearInput('');
   };
 
   const removeSkill = (category, idx) => {
     onChange({ ...data, [category]: data[category].filter((_, i) => i !== idx) });
   };
 
-  // Get filtered suggestions based on input (excluding already added skills)
   const getFilteredSuggestions = (category, input) => {
     if (!input.trim()) return [];
     const existing = data[category].map(s => s.toLowerCase());
@@ -560,7 +540,6 @@ const SkillsEditor = ({ data, onChange }) => {
       .slice(0, 5);
   };
 
-  // Get quick-pick suggestions (not yet added)
   const getQuickPicks = (category) => {
     const existing = data[category].map(s => s.toLowerCase());
     return SKILL_SUGGESTIONS[category]
@@ -568,25 +547,26 @@ const SkillsEditor = ({ data, onChange }) => {
       .slice(0, 6);
   };
 
-  // Render skill tags for a category
-  const renderSkillTags = (skills, category) => (
-    <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: 8, minHeight: 20 }}>
-      {skills.map((skill, idx) => (
-        <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 12px', background: 'rgba(74, 144, 226, 0.2)', borderRadius: 20, fontSize: 14, margin: 4, color: '#8bb8e8' }}>
-          {skill}
-          <button onClick={() => removeSkill(category, idx)} style={{ background: 'none', border: 'none', color: '#e24a4a', marginLeft: 6, cursor: 'pointer', padding: 0, fontSize: 16 }}>×</button>
-        </span>
-      ))}
-    </div>
-  );
-
-  // Render skill input for a category - uses refs for button click to avoid stale closures
-  const renderSkillInput = (category, input, setInput, inputRef, placeholder) => {
+  // Inline rendering to avoid component recreation
+  const renderSkillSection = (category, label, input, setInput) => {
     const suggestions = getFilteredSuggestions(category, input);
     const quickPicks = input.trim() ? [] : getQuickPicks(category);
 
     return (
-      <div>
+      <div style={{ marginBottom: category === 'industry' ? 8 : 24 }}>
+        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>{label}</label>
+
+        {/* Skill tags */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: 8, minHeight: 20 }}>
+          {data[category].map((skill, idx) => (
+            <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 12px', background: 'rgba(74, 144, 226, 0.2)', borderRadius: 20, fontSize: 14, margin: 4, color: '#8bb8e8' }}>
+              {skill}
+              <button onClick={() => removeSkill(category, idx)} style={{ background: 'none', border: 'none', color: '#e24a4a', marginLeft: 6, cursor: 'pointer', padding: 0, fontSize: 16 }}>×</button>
+            </span>
+          ))}
+        </div>
+
+        {/* Input row */}
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
@@ -595,36 +575,30 @@ const SkillsEditor = ({ data, onChange }) => {
             onKeyDown={e => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                addSkillFromRef(category, inputRef, setInput);
+                addSkill(category, input, setInput);
               }
             }}
-            placeholder={placeholder}
+            placeholder="Type or pick a skill..."
           />
-          <Button small onClick={() => addSkillFromRef(category, inputRef, setInput)}>+</Button>
+          <Button small onClick={() => addSkill(category, input, setInput)}>+</Button>
         </div>
-        {/* Autocomplete suggestions when typing */}
+
+        {/* Autocomplete suggestions */}
         {suggestions.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
             {suggestions.map(skill => (
               <button
                 key={skill}
-                onClick={() => addSkillDirect(category, skill, setInput)}
-                style={{
-                  padding: '6px 12px',
-                  background: 'rgba(74, 226, 74, 0.15)',
-                  border: '1px solid rgba(74, 226, 74, 0.3)',
-                  borderRadius: 16,
-                  color: '#7be87b',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                }}
+                onClick={() => addSkill(category, skill, setInput)}
+                style={{ padding: '6px 12px', background: 'rgba(74, 226, 74, 0.15)', border: '1px solid rgba(74, 226, 74, 0.3)', borderRadius: 16, color: '#7be87b', fontSize: 13, cursor: 'pointer' }}
               >
                 + {skill}
               </button>
             ))}
           </div>
         )}
-        {/* Quick-pick suggestions when input is empty */}
+
+        {/* Quick picks */}
         {quickPicks.length > 0 && (
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>Quick add:</div>
@@ -632,16 +606,8 @@ const SkillsEditor = ({ data, onChange }) => {
               {quickPicks.map(skill => (
                 <button
                   key={skill}
-                  onClick={() => addSkillDirect(category, skill, setInput)}
-                  style={{
-                    padding: '5px 10px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 14,
-                    color: '#888',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                  }}
+                  onClick={() => addSkill(category, skill, setInput)}
+                  style={{ padding: '5px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#888', fontSize: 12, cursor: 'pointer' }}
                 >
                   {skill}
                 </button>
@@ -656,27 +622,9 @@ const SkillsEditor = ({ data, onChange }) => {
   return (
     <Card>
       <SectionTitle>Skills</SectionTitle>
-
-      {/* Technical Skills */}
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Technical Skills</label>
-        {renderSkillTags(data.technical, 'technical')}
-        {renderSkillInput('technical', techInput, setTechInput, techInputRef, 'Type or pick a skill...')}
-      </div>
-
-      {/* Soft Skills */}
-      <div style={{ marginBottom: 24 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Soft Skills</label>
-        {renderSkillTags(data.soft, 'soft')}
-        {renderSkillInput('soft', softInput, setSoftInput, softInputRef, 'Type or pick a skill...')}
-      </div>
-
-      {/* Industry Skills */}
-      <div style={{ marginBottom: 8 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>Industry / Domain Skills</label>
-        {renderSkillTags(data.industry, 'industry')}
-        {renderSkillInput('industry', industryInput, setIndustryInput, industryInputRef, 'Type or pick a skill...')}
-      </div>
+      {renderSkillSection('technical', 'Technical Skills', techInput, setTechInput)}
+      {renderSkillSection('soft', 'Soft Skills', softInput, setSoftInput)}
+      {renderSkillSection('industry', 'Industry / Domain Skills', industryInput, setIndustryInput)}
     </Card>
   );
 };
