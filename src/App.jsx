@@ -505,10 +505,53 @@ const SKILL_SUGGESTIONS = {
     // Compliance & Standards
     'HIPAA', 'SOC 2', 'GDPR', 'PCI-DSS', 'ISO 27001',
     // DevOps & Infrastructure
-    'Infrastructure as Code', 'Configuration Management', 'Monitoring', 'Logging', 'Observability', 'Database Administration',
-    // Aviation (placeholder - more to be added)
-    'FAA Regulations', 'Aircraft Maintenance', 'Aviation Safety'
+    'Infrastructure as Code', 'Configuration Management', 'Monitoring', 'Logging', 'Observability', 'Database Administration'
   ]
+};
+
+// Aviation keywords for smart filtering (170 curated from 1,664 total)
+const AVIATION_KEYWORDS = [
+  // Certifications
+  'A&P License', 'Airframe and Powerplant', 'FAA Certificated', 'IA', 'Inspection Authorization',
+  'Repairman Certificate', 'FCC License', 'GROL', 'NDT Certification', 'ASQ CQE', 'ASQ CQA',
+  // Regulatory
+  'FAA', 'EASA', 'FAR', 'Federal Aviation Regulations', '14 CFR', 'Part 43', 'Part 65',
+  'Part 91', 'Part 121', 'Part 135', 'Part 145', 'Airworthiness Directive', 'AD Compliance',
+  'Service Bulletin', 'Type Certificate', 'STC', 'PMA', 'TSO', 'DER', 'DAR',
+  // Maintenance Types
+  'Line Maintenance', 'Base Maintenance', 'Heavy Maintenance', 'A Check', 'B Check', 'C Check', 'D Check',
+  'Phase Check', 'Progressive Inspection', '100-Hour Inspection', 'Annual Inspection', 'AOG', 'Aircraft on Ground',
+  // Aircraft Systems
+  'Airframe', 'Powerplant', 'Avionics', 'Electrical Systems', 'Hydraulic Systems', 'Pneumatic Systems',
+  'Fuel Systems', 'Flight Controls', 'Landing Gear', 'ECS', 'APU', 'Turbofan', 'Turboprop',
+  // Quality
+  'Quality Control', 'QC', 'Quality Assurance', 'QA', 'QMS', 'AS9100', 'AS9110', 'NADCAP',
+  'First Article Inspection', 'FAI', 'Receiving Inspection', 'In-Process Inspection', 'SPC',
+  // Safety
+  'Safety Management System', 'SMS', 'Human Factors', 'CRM', 'MRM', 'Just Culture', 'Hazard Identification',
+  // Skills
+  'Troubleshooting', 'Fault Isolation', 'Blueprint Reading', 'Schematic Interpretation', 'Wiring Diagram Interpretation',
+  'Sheet Metal Repair', 'Composite Repair', 'Corrosion Control', 'NDT', 'Borescope Inspection',
+  // Software
+  'AMOS', 'TRAX', 'Ramco', 'Maximo', 'Maintenix', 'OASES',
+  // Documentation
+  'Aircraft Maintenance Manual', 'AMM', 'IPC', 'CMM', 'SRM', 'MEL', 'CDL',
+  // Processes
+  'Continuous Airworthiness', 'Reliability Program', 'Configuration Control', 'Maintenance Planning'
+];
+
+// Triggers to detect aviation job context
+const AVIATION_TRIGGERS = [
+  'faa', 'easa', 'aircraft', 'aviation', 'airline', 'aerospace', 'a&p', 'airframe',
+  'powerplant', 'avionics', 'mro', 'part 121', 'part 135', 'part 145', 'airworthiness',
+  'mechanic', 'amt', 'pilot', 'flight', 'hangar', 'maintenance manual'
+];
+
+// Detect if job description is aviation-related
+const detectAviationContext = (text) => {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return AVIATION_TRIGGERS.some(trigger => lower.includes(trigger));
 };
 
 // Individual skill section - uncontrolled input to prevent focus loss
@@ -617,10 +660,33 @@ const SkillSection = React.memo(({ category, label, skills, allSuggestions, onAd
 });
 
 // Skills editor - each section is isolated to prevent focus loss
-const SkillsEditor = ({ data, onChange }) => {
+const SkillsEditor = ({ data, onChange, jobDescription }) => {
+  // Detect aviation context and merge aviation keywords into industry suggestions
+  const isAviationJob = detectAviationContext(jobDescription);
+  const industrySuggestions = useMemo(() => {
+    if (isAviationJob) {
+      // Merge aviation keywords (prioritized) with general industry skills
+      const combined = [...AVIATION_KEYWORDS, ...SKILL_SUGGESTIONS.industry];
+      // Remove duplicates
+      const seen = new Set();
+      return combined.filter(s => {
+        const lower = s.toLowerCase();
+        if (seen.has(lower)) return false;
+        seen.add(lower);
+        return true;
+      });
+    }
+    return SKILL_SUGGESTIONS.industry;
+  }, [isAviationJob]);
+
   return (
     <Card>
       <SectionTitle>Skills</SectionTitle>
+      {isAviationJob && (
+        <div style={{ background: 'rgba(74, 226, 74, 0.1)', border: '1px solid rgba(74, 226, 74, 0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 13, color: '#7be87b' }}>
+          ✈️ Aviation job detected — showing 170+ aviation-specific skills
+        </div>
+      )}
       <SkillSection
         category="technical"
         label="Technical Skills"
@@ -639,9 +705,9 @@ const SkillsEditor = ({ data, onChange }) => {
       />
       <SkillSection
         category="industry"
-        label="Industry / Domain Skills"
+        label={isAviationJob ? "Industry / Aviation Skills" : "Industry / Domain Skills"}
         skills={data.industry}
-        allSuggestions={SKILL_SUGGESTIONS.industry}
+        allSuggestions={industrySuggestions}
         onAdd={(skill) => onChange({ ...data, industry: [...data.industry, skill] })}
         onRemove={(idx) => onChange({ ...data, industry: data.industry.filter((_, i) => i !== idx) })}
         isLast
@@ -1098,8 +1164,7 @@ const ResumePreview = ({ sections, data, onExpand }) => (
 );
 
 // ATS Keyword Analyzer Component
-const ATSAnalyzer = ({ resumeData, sections }) => {
-  const [jobDescription, setJobDescription] = useState('');
+const ATSAnalyzer = ({ resumeData, sections, jobDescription, setJobDescription }) => {
   const [analysis, setAnalysis] = useState(null);
 
   // Common words to ignore
@@ -2203,6 +2268,12 @@ const HelpModal = ({ onClose }) => {
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
           <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.4.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Smart aviation keyword filtering (170+ skills from 1,664 database)<br/>
+            • Auto-detects aviation jobs from description (FAA, aircraft, MRO, etc.)<br/>
+            • Aviation skills appear as quick picks when job context detected
+          </p>
+          <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.3.3</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
             • Fixed skills input focus with uncontrolled input pattern<br/>
             • Debounced suggestions (150ms) to prevent focus stealing<br/>
@@ -2260,6 +2331,7 @@ export default function RDResumeBuilder() {
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [pendingSavedData, setPendingSavedData] = useState(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [jobDescription, setJobDescription] = useState(''); // Lifted for smart skill filtering
 
   // Validate contact info before proceeding
   const validateContact = () => {
@@ -2727,7 +2799,7 @@ export default function RDResumeBuilder() {
       case 'summary': return <SummaryEditor data={data.summary} onChange={v => updateData('summary', v)} />;
       case 'experience': return <ExperienceEditor data={data.experience} onChange={v => updateData('experience', v)} />;
       case 'education': return <EducationEditor data={data.education} onChange={v => updateData('education', v)} />;
-      case 'skills': return <SkillsEditor data={data.skills} onChange={v => updateData('skills', v)} />;
+      case 'skills': return <SkillsEditor data={data.skills} onChange={v => updateData('skills', v)} jobDescription={jobDescription} />;
       case 'clearances': return <ClearancesEditor data={data.clearances} onChange={v => updateData('clearances', v)} />;
       case 'certifications': return <CertificationsEditor data={data.certifications} onChange={v => updateData('certifications', v)} />;
       case 'military': return <SimpleListEditor title="Military Service" data={data.military} onChange={v => updateData('military', v)} fields={[{ key: 'branch', label: 'Branch', placeholder: 'U.S. Army' }, { key: 'rank', label: 'Rank', placeholder: 'Sergeant' }, { key: 'dates', label: 'Dates', placeholder: '2010 - 2016' }]} />;
@@ -2841,7 +2913,7 @@ export default function RDResumeBuilder() {
         {view === 'preview' && (
           <>
             <Card><SectionTitle>Resume Preview</SectionTitle><ResumePreview sections={sections} data={data} onExpand={() => setShowFullPreview(true)} /></Card>
-            <ATSAnalyzer resumeData={data} sections={sections} />
+            <ATSAnalyzer resumeData={data} sections={sections} jobDescription={jobDescription} setJobDescription={setJobDescription} />
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
               <Button variant="secondary" style={{ flex: 1 }} onClick={() => setView('edit')}>← Edit</Button>
               <Button style={{ flex: 1 }} onClick={() => setView('export')}>Export →</Button>
