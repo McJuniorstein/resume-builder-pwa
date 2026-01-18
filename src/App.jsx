@@ -1168,9 +1168,9 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
     return Math.round((matched.length / jobKeywords.length) * 100);
   };
 
-  // Calculate skills-specific score with better algorithm
+  // Calculate skills-specific score - what percentage of YOUR skills match the job
   const calcSkillsScore = (skills, jobKeywords, jobDescLower) => {
-    if (!skills || jobKeywords.length === 0) return 0;
+    if (!skills) return 0;
 
     const allSkills = [
       ...(skills.technical || []),
@@ -1178,45 +1178,32 @@ const ATSAnalyzer = ({ resumeData, sections }) => {
       ...(skills.industry || [])
     ];
 
-    if (allSkills.length === 0) return 0;
+    if (allSkills.length === 0 || !jobDescLower) return 0;
 
+    // Normalize text for matching (remove hyphens, extra spaces, lowercase)
+    const normalize = (text) => text.toLowerCase().replace(/[-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const jobTextNormalized = normalize(jobDescLower);
+
+    // Count how many of YOUR skills appear in the job description
     let matchedSkills = 0;
-    let totalRelevantKeywords = 0;
-
-    // Method 1: Check how many of user's skills appear in job description
     allSkills.forEach(skill => {
-      const skillLower = skill.toLowerCase();
-      // Check if skill or any word in skill appears in job description
-      if (jobDescLower.includes(skillLower)) {
+      const skillNormalized = normalize(skill);
+      // Check if the skill appears in job description
+      if (jobTextNormalized.includes(skillNormalized)) {
         matchedSkills++;
       } else {
-        // For multi-word skills, check individual words
-        const words = skillLower.split(/[\s\/\-]+/).filter(w => w.length > 2);
-        if (words.some(w => jobDescLower.includes(w))) {
-          matchedSkills += 0.5; // Partial match
+        // Check individual words for multi-word skills (e.g., "Problem Solving" -> check "problem" and "solving")
+        const words = skillNormalized.split(' ').filter(w => w.length > 2);
+        // If most words from the skill appear in job desc, count as partial match
+        const wordMatches = words.filter(w => jobTextNormalized.includes(w)).length;
+        if (words.length > 0 && wordMatches >= Math.ceil(words.length * 0.6)) {
+          matchedSkills += 0.75;
         }
       }
     });
 
-    // Method 2: Check how many job keywords match user's skills
-    const skillsTextLower = allSkills.join(' ').toLowerCase();
-    const skillWords = new Set(skillsTextLower.split(/[\s\/\-]+/).filter(w => w.length > 2));
-
-    jobKeywords.forEach(kw => {
-      // Count keyword as "relevant to skills" if it could be a skill
-      // (not a common verb, not too generic)
-      const isLikelySkill = !STOP_WORDS.has(kw) && kw.length > 2;
-      if (isLikelySkill && (skillsTextLower.includes(kw) || skillWords.has(kw))) {
-        totalRelevantKeywords++;
-      }
-    });
-
-    // Combine both methods for a balanced score
-    // Score = (matched skills / total skills) * 50 + (relevant keyword matches / 20) * 50
-    const skillCoverage = (matchedSkills / allSkills.length) * 50;
-    const keywordCoverage = Math.min((totalRelevantKeywords / 10) * 50, 50); // Cap at 50%
-
-    return Math.round(skillCoverage + keywordCoverage);
+    // Score = what percentage of YOUR skills match the job
+    return Math.round((matchedSkills / allSkills.length) * 100);
   };
 
   const analyzeMatch = () => {
@@ -2194,6 +2181,12 @@ const HelpModal = ({ onClose }) => {
 
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
+          <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.3.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Fixed skills input losing focus while typing<br/>
+            • Fixed "Welcome Back" modal not appearing on return visits<br/>
+            • Improved ATS skills scoring - now shows % of your skills that match job
+          </p>
           <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.3.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
             • Form validation for required contact fields<br/>
