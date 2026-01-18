@@ -2239,6 +2239,7 @@ export default function RDResumeBuilder() {
   const [saveVisible, setSaveVisible] = useState(false);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [pendingSavedData, setPendingSavedData] = useState(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Validate contact info before proceeding
   const validateContact = () => {
@@ -2275,7 +2276,6 @@ export default function RDResumeBuilder() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Only show welcome back if there's meaningful data
         if (hasMeaningfulData(parsed)) {
           setPendingSavedData(parsed);
           setShowWelcomeBack(true);
@@ -2284,6 +2284,7 @@ export default function RDResumeBuilder() {
     } catch (e) {
       console.error('Failed to load saved data:', e);
     }
+    setInitialLoadComplete(true);
   }, []);
 
   // Handle continuing with saved data
@@ -2316,27 +2317,23 @@ export default function RDResumeBuilder() {
     }
   };
 
-  // Save to localStorage with indicator
+  // Save to localStorage with indicator - only after initial load is complete
   useEffect(() => {
-    // Skip initial render (data loaded from storage)
-    const isInitialLoad = !lastSaved && !saveVisible;
+    // Don't save until initial load is complete (prevents overwriting saved data on mount)
+    if (!initialLoadComplete) return;
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ sections, data }));
+      setLastSaved(new Date());
+      setSaveVisible(true);
 
-      // Only show indicator after initial load
-      if (!isInitialLoad || lastSaved) {
-        setLastSaved(new Date());
-        setSaveVisible(true);
-
-        // Hide indicator after 2 seconds
-        const timer = setTimeout(() => setSaveVisible(false), 2000);
-        return () => clearTimeout(timer);
-      }
+      // Hide indicator after 2 seconds
+      const timer = setTimeout(() => setSaveVisible(false), 2000);
+      return () => clearTimeout(timer);
     } catch (e) {
       console.error('Failed to save data:', e);
     }
-  }, [sections, data]);
+  }, [sections, data, initialLoadComplete]);
 
   // Load device storage files
   useEffect(() => {
