@@ -511,27 +511,57 @@ const SKILL_SUGGESTIONS = {
   ]
 };
 
-// Individual skill section - isolated state prevents cross-section re-renders
+// Individual skill section - uncontrolled input to prevent focus loss
 const SkillSection = React.memo(({ category, label, skills, allSuggestions, onAdd, onRemove, isLast }) => {
-  const [input, setInput] = useState('');
   const inputRef = useRef(null);
+  const [debouncedInput, setDebouncedInput] = useState('');
+  const debounceRef = useRef(null);
 
-  const existingLower = skills.map(s => s.toLowerCase());
+  const existingLower = useMemo(() => skills.map(s => s.toLowerCase()), [skills]);
 
-  const suggestions = input.trim()
-    ? allSuggestions.filter(s => s.toLowerCase().includes(input.toLowerCase()) && !existingLower.includes(s.toLowerCase())).slice(0, 5)
-    : [];
+  // Debounced suggestion update - doesn't affect input focus
+  const handleInputChange = useCallback((e) => {
+    const value = e.target.value;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedInput(value), 150);
+  }, []);
 
-  const quickPicks = input.trim() ? [] : allSuggestions.filter(s => !existingLower.includes(s.toLowerCase())).slice(0, 6);
+  // Calculate suggestions from debounced input - prefix matches first, then contains
+  const suggestions = useMemo(() => {
+    if (!debouncedInput.trim()) return [];
+    const lower = debouncedInput.toLowerCase();
+    const available = allSuggestions.filter(s => !existingLower.includes(s.toLowerCase()));
+    const prefixMatches = available.filter(s => s.toLowerCase().startsWith(lower));
+    const containsMatches = available.filter(s => !s.toLowerCase().startsWith(lower) && s.toLowerCase().includes(lower));
+    return [...prefixMatches, ...containsMatches].slice(0, 5);
+  }, [debouncedInput, allSuggestions, existingLower]);
 
-  const handleAdd = (value) => {
+  const quickPicks = useMemo(() => {
+    if (debouncedInput.trim()) return [];
+    return allSuggestions.filter(s => !existingLower.includes(s.toLowerCase())).slice(0, 6);
+  }, [debouncedInput, allSuggestions, existingLower]);
+
+  const handleAdd = useCallback((value) => {
     const trimmed = (value || '').trim();
     if (!trimmed || existingLower.includes(trimmed.toLowerCase())) return;
     onAdd(trimmed);
-    setInput('');
-    // Refocus input after adding
-    setTimeout(() => inputRef.current?.focus(), 0);
-  };
+    if (inputRef.current) {
+      inputRef.current.value = '';
+      inputRef.current.focus();
+    }
+    setDebouncedInput('');
+  }, [existingLower, onAdd]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAdd(inputRef.current?.value);
+    }
+  }, [handleAdd]);
+
+  const handleButtonClick = useCallback(() => {
+    handleAdd(inputRef.current?.value);
+  }, [handleAdd]);
 
   return (
     <div style={{ marginBottom: isLast ? 8 : 24 }}>
@@ -547,21 +577,21 @@ const SkillSection = React.memo(({ category, label, skills, allSuggestions, onAd
         ))}
       </div>
 
-      {/* Input row */}
+      {/* Input row - UNCONTROLLED to prevent focus loss */}
       <div style={{ display: 'flex', gap: 8 }}>
         <input
           ref={inputRef}
           style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(input); } }}
+          defaultValue=""
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           placeholder="Type or pick a skill..."
         />
-        <Button small onClick={() => handleAdd(input)}>+</Button>
+        <Button small onClick={handleButtonClick}>+</Button>
       </div>
 
-      {/* Autocomplete suggestions - always render container for stable DOM */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: suggestions.length ? 8 : 0, minHeight: suggestions.length ? 'auto' : 0 }}>
+      {/* Autocomplete suggestions - stable container */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: suggestions.length ? 8 : 0 }}>
         {suggestions.map(skill => (
           <button key={skill} onClick={() => handleAdd(skill)} style={{ padding: '6px 12px', background: 'rgba(74, 226, 74, 0.15)', border: '1px solid rgba(74, 226, 74, 0.3)', borderRadius: 16, color: '#7be87b', fontSize: 13, cursor: 'pointer' }}>
             + {skill}
@@ -2173,9 +2203,10 @@ const HelpModal = ({ onClose }) => {
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
           <p style={{ marginBottom: 12 }}>
-            <strong style={{ color: '#4a90e2' }}>v1.3.2</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
-            • Production fix: Skills input now stable in deployed builds<br/>
-            • Isolated skill sections with React.memo for better performance
+            <strong style={{ color: '#4a90e2' }}>v1.3.3</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Fixed skills input focus with uncontrolled input pattern<br/>
+            • Debounced suggestions (150ms) to prevent focus stealing<br/>
+            • Improved suggestion matching: prefix matches shown first
           </p>
           <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.3.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
