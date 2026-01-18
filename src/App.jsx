@@ -511,120 +511,111 @@ const SKILL_SUGGESTIONS = {
   ]
 };
 
-// Skills editor - stable component structure to prevent focus loss
-const SkillsEditor = ({ data, onChange }) => {
-  const [techInput, setTechInput] = useState('');
-  const [softInput, setSoftInput] = useState('');
-  const [industryInput, setIndustryInput] = useState('');
+// Individual skill section - isolated state prevents cross-section re-renders
+const SkillSection = React.memo(({ category, label, skills, allSuggestions, onAdd, onRemove, isLast }) => {
+  const [input, setInput] = useState('');
+  const inputRef = useRef(null);
 
-  const addSkill = (category, value, clearInput) => {
+  const existingLower = skills.map(s => s.toLowerCase());
+
+  const suggestions = input.trim()
+    ? allSuggestions.filter(s => s.toLowerCase().includes(input.toLowerCase()) && !existingLower.includes(s.toLowerCase())).slice(0, 5)
+    : [];
+
+  const quickPicks = input.trim() ? [] : allSuggestions.filter(s => !existingLower.includes(s.toLowerCase())).slice(0, 6);
+
+  const handleAdd = (value) => {
     const trimmed = (value || '').trim();
-    if (!trimmed) return;
-    if (data[category].some(s => s.toLowerCase() === trimmed.toLowerCase())) return;
-    onChange({ ...data, [category]: [...data[category], trimmed] });
-    clearInput('');
-  };
-
-  const removeSkill = (category, idx) => {
-    onChange({ ...data, [category]: data[category].filter((_, i) => i !== idx) });
-  };
-
-  const getFilteredSuggestions = (category, input) => {
-    if (!input.trim()) return [];
-    const existing = data[category].map(s => s.toLowerCase());
-    return SKILL_SUGGESTIONS[category]
-      .filter(skill =>
-        skill.toLowerCase().includes(input.toLowerCase()) &&
-        !existing.includes(skill.toLowerCase())
-      )
-      .slice(0, 5);
-  };
-
-  const getQuickPicks = (category) => {
-    const existing = data[category].map(s => s.toLowerCase());
-    return SKILL_SUGGESTIONS[category]
-      .filter(skill => !existing.includes(skill.toLowerCase()))
-      .slice(0, 6);
-  };
-
-  // Inline rendering to avoid component recreation
-  const renderSkillSection = (category, label, input, setInput) => {
-    const suggestions = getFilteredSuggestions(category, input);
-    const quickPicks = input.trim() ? [] : getQuickPicks(category);
-
-    return (
-      <div style={{ marginBottom: category === 'industry' ? 8 : 24 }}>
-        <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>{label}</label>
-
-        {/* Skill tags */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: 8, minHeight: 20 }}>
-          {data[category].map((skill, idx) => (
-            <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 12px', background: 'rgba(74, 144, 226, 0.2)', borderRadius: 20, fontSize: 14, margin: 4, color: '#8bb8e8' }}>
-              {skill}
-              <button onClick={() => removeSkill(category, idx)} style={{ background: 'none', border: 'none', color: '#e24a4a', marginLeft: 6, cursor: 'pointer', padding: 0, fontSize: 16 }}>×</button>
-            </span>
-          ))}
-        </div>
-
-        {/* Input row */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                addSkill(category, input, setInput);
-              }
-            }}
-            placeholder="Type or pick a skill..."
-          />
-          <Button small onClick={() => addSkill(category, input, setInput)}>+</Button>
-        </div>
-
-        {/* Autocomplete suggestions */}
-        {suggestions.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-            {suggestions.map(skill => (
-              <button
-                key={skill}
-                onClick={() => addSkill(category, skill, setInput)}
-                style={{ padding: '6px 12px', background: 'rgba(74, 226, 74, 0.15)', border: '1px solid rgba(74, 226, 74, 0.3)', borderRadius: 16, color: '#7be87b', fontSize: 13, cursor: 'pointer' }}
-              >
-                + {skill}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Quick picks */}
-        {quickPicks.length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>Quick add:</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {quickPicks.map(skill => (
-                <button
-                  key={skill}
-                  onClick={() => addSkill(category, skill, setInput)}
-                  style={{ padding: '5px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#888', fontSize: 12, cursor: 'pointer' }}
-                >
-                  {skill}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    if (!trimmed || existingLower.includes(trimmed.toLowerCase())) return;
+    onAdd(trimmed);
+    setInput('');
+    // Refocus input after adding
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   return (
+    <div style={{ marginBottom: isLast ? 8 : 24 }}>
+      <label style={{ display: 'block', fontSize: 13, color: '#aaa', marginBottom: 6, fontWeight: 500 }}>{label}</label>
+
+      {/* Skill tags */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: 8, minHeight: 20 }}>
+        {skills.map((skill, idx) => (
+          <span key={skill} style={{ display: 'inline-flex', alignItems: 'center', padding: '6px 12px', background: 'rgba(74, 144, 226, 0.2)', borderRadius: 20, fontSize: 14, margin: 4, color: '#8bb8e8' }}>
+            {skill}
+            <button onClick={() => onRemove(idx)} style={{ background: 'none', border: 'none', color: '#e24a4a', marginLeft: 6, cursor: 'pointer', padding: 0, fontSize: 16 }}>×</button>
+          </span>
+        ))}
+      </div>
+
+      {/* Input row */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          ref={inputRef}
+          style={{ flex: 1, padding: '14px 16px', fontSize: 16, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', outline: 'none', boxSizing: 'border-box' }}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(input); } }}
+          placeholder="Type or pick a skill..."
+        />
+        <Button small onClick={() => handleAdd(input)}>+</Button>
+      </div>
+
+      {/* Autocomplete suggestions - always render container for stable DOM */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: suggestions.length ? 8 : 0, minHeight: suggestions.length ? 'auto' : 0 }}>
+        {suggestions.map(skill => (
+          <button key={skill} onClick={() => handleAdd(skill)} style={{ padding: '6px 12px', background: 'rgba(74, 226, 74, 0.15)', border: '1px solid rgba(74, 226, 74, 0.3)', borderRadius: 16, color: '#7be87b', fontSize: 13, cursor: 'pointer' }}>
+            + {skill}
+          </button>
+        ))}
+      </div>
+
+      {/* Quick picks */}
+      {quickPicks.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>Quick add:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {quickPicks.map(skill => (
+              <button key={skill} onClick={() => handleAdd(skill)} style={{ padding: '5px 10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, color: '#888', fontSize: 12, cursor: 'pointer' }}>
+                {skill}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+// Skills editor - each section is isolated to prevent focus loss
+const SkillsEditor = ({ data, onChange }) => {
+  return (
     <Card>
       <SectionTitle>Skills</SectionTitle>
-      {renderSkillSection('technical', 'Technical Skills', techInput, setTechInput)}
-      {renderSkillSection('soft', 'Soft Skills', softInput, setSoftInput)}
-      {renderSkillSection('industry', 'Industry / Domain Skills', industryInput, setIndustryInput)}
+      <SkillSection
+        category="technical"
+        label="Technical Skills"
+        skills={data.technical}
+        allSuggestions={SKILL_SUGGESTIONS.technical}
+        onAdd={(skill) => onChange({ ...data, technical: [...data.technical, skill] })}
+        onRemove={(idx) => onChange({ ...data, technical: data.technical.filter((_, i) => i !== idx) })}
+      />
+      <SkillSection
+        category="soft"
+        label="Soft Skills"
+        skills={data.soft}
+        allSuggestions={SKILL_SUGGESTIONS.soft}
+        onAdd={(skill) => onChange({ ...data, soft: [...data.soft, skill] })}
+        onRemove={(idx) => onChange({ ...data, soft: data.soft.filter((_, i) => i !== idx) })}
+      />
+      <SkillSection
+        category="industry"
+        label="Industry / Domain Skills"
+        skills={data.industry}
+        allSuggestions={SKILL_SUGGESTIONS.industry}
+        onAdd={(skill) => onChange({ ...data, industry: [...data.industry, skill] })}
+        onRemove={(idx) => onChange({ ...data, industry: data.industry.filter((_, i) => i !== idx) })}
+        isLast
+      />
     </Card>
   );
 };
@@ -2181,6 +2172,11 @@ const HelpModal = ({ onClose }) => {
 
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
+          <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.3.2</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Production fix: Skills input now stable in deployed builds<br/>
+            • Isolated skill sections with React.memo for better performance
+          </p>
           <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.3.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
             • Fixed skills input losing focus while typing<br/>
