@@ -2268,6 +2268,11 @@ const HelpModal = ({ onClose }) => {
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
           <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.4.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Clickable section navigation — jump directly to any section<br/>
+            • Visual indicators: current (blue), completed (green ✓), pending (gray)
+          </p>
+          <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.4.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
             • Smart aviation keyword filtering (170+ skills from 1,664 database)<br/>
             • Auto-detects aviation jobs from description (FAA, aircraft, MRO, etc.)<br/>
@@ -2877,17 +2882,48 @@ export default function RDResumeBuilder() {
 
         {view === 'edit' && (
           <>
-            <div style={{ display: 'flex', gap: 4, marginBottom: 20 }}>
-              {enabledSections.map((_, idx) => (
-                <div key={idx} style={{
-                  flex: 1, height: 4, borderRadius: 2,
-                  background: idx < currentSection ? '#4ae24a' : idx === currentSection ? '#4a90e2' : 'rgba(255,255,255,0.2)',
-                  transition: 'background 0.3s',
-                }} />
-              ))}
-            </div>
-            <div style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>
-              Section {currentSection + 1} of {enabledSections.length}: <strong style={{ color: '#fff' }}>{sections[enabledSections[currentSection]]?.label}</strong>
+            {/* Clickable Section Navigation */}
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginBottom: 20,
+              padding: '12px 0',
+            }}>
+              {enabledSections.map((key, idx) => {
+                const isCompleted = idx < currentSection;
+                const isCurrent = idx === currentSection;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      // Validate contact if leaving contact section
+                      if (enabledSections[currentSection] === 'contact' && idx > currentSection && !validateContact()) {
+                        return;
+                      }
+                      setContactErrors({});
+                      setCurrentSection(idx);
+                    }}
+                    style={{
+                      padding: '8px 14px',
+                      fontSize: 13,
+                      fontWeight: isCurrent ? 600 : 400,
+                      background: isCurrent ? '#4a90e2' : isCompleted ? 'rgba(74, 226, 74, 0.15)' : 'rgba(255,255,255,0.08)',
+                      border: isCurrent ? '2px solid #4a90e2' : isCompleted ? '1px solid rgba(74, 226, 74, 0.4)' : '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 20,
+                      color: isCurrent ? '#fff' : isCompleted ? '#7be87b' : '#888',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    {isCompleted && <span style={{ fontSize: 11 }}>✓</span>}
+                    {sections[key]?.label}
+                  </button>
+                );
+              })}
             </div>
             {renderEditor()}
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
