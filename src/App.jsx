@@ -362,12 +362,22 @@ const SummaryEditor = ({ data, onChange }) => (
   </Card>
 );
 
-const ExperienceEditor = ({ data, onChange }) => {
+const ExperienceEditor = ({ data, onChange, formRef }) => {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ company: '', title: '', startDate: '', endDate: '', current: false, bullets: '' });
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
-  const saveEntry = () => {
-    if (!form.company || !form.title) return;
+  // Update ref whenever form changes so parent can auto-save on navigation
+  useEffect(() => {
+    if (formRef) {
+      const hasData = form.company?.trim() || form.title?.trim();
+      formRef.current = hasData ? { form, editing, save: saveEntryInternal } : null;
+      setHasUnsaved(hasData);
+    }
+  }, [form, editing]);
+
+  const saveEntryInternal = () => {
+    if (!form.company || !form.title) return false;
     const entry = { ...form, bullets: form.bullets.split('\n').filter(b => b.trim()) };
     if (editing !== null) {
       const updated = [...data];
@@ -378,7 +388,12 @@ const ExperienceEditor = ({ data, onChange }) => {
     }
     setForm({ company: '', title: '', startDate: '', endDate: '', current: false, bullets: '' });
     setEditing(null);
+    setHasUnsaved(false);
+    if (formRef) formRef.current = null;
+    return true;
   };
+
+  const saveEntry = saveEntryInternal;
 
   const editEntry = (idx) => {
     const entry = data[idx];
@@ -386,7 +401,11 @@ const ExperienceEditor = ({ data, onChange }) => {
     setEditing(idx);
   };
 
-  const deleteEntry = (idx) => onChange(data.filter((_, i) => i !== idx));
+  const deleteEntry = (idx) => {
+    if (window.confirm('Delete this work experience? This cannot be undone.')) {
+      onChange(data.filter((_, i) => i !== idx));
+    }
+  };
 
   return (
     <Card>
@@ -401,6 +420,11 @@ const ExperienceEditor = ({ data, onChange }) => {
       ))}
 
       <FormBox>
+        {hasUnsaved && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: 6, marginBottom: 12, fontSize: 12, color: '#ffc107' }}>
+            <span>●</span> Draft - click "{editing !== null ? 'Update' : 'Add'} Experience" to save
+          </div>
+        )}
         <AutoSuggestInput label="Company" category="companies" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} placeholder="Company Name" />
         <AutoSuggestInput label="Job Title" category="titles" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Software Engineer" />
         <div style={{ display: 'flex', gap: 12 }}>
@@ -415,10 +439,10 @@ const ExperienceEditor = ({ data, onChange }) => {
           <input type="checkbox" style={{ width: 22, height: 22, accentColor: '#4a90e2' }} checked={form.current} onChange={e => setForm({ ...form, current: e.target.checked })} />
           Currently working here
         </label>
-        <TextArea 
-          label="Key Accomplishments (one per line)" 
-          value={form.bullets} 
-          onChange={e => setForm({ ...form, bullets: e.target.value })} 
+        <TextArea
+          label="Key Accomplishments (one per line)"
+          value={form.bullets}
+          onChange={e => setForm({ ...form, bullets: e.target.value })}
           placeholder={"Led team of 5 engineers\nReduced processing time by 40%\nImplemented new CI/CD pipeline"}
         />
         <Button onClick={saveEntry} small>{editing !== null ? 'Update' : 'Add'} Experience</Button>
@@ -427,16 +451,35 @@ const ExperienceEditor = ({ data, onChange }) => {
   );
 };
 
-const EducationEditor = ({ data, onChange }) => {
+const EducationEditor = ({ data, onChange, formRef }) => {
   const [form, setForm] = useState({ school: '', degree: '', field: '', graduationDate: '', gpa: '' });
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
-  const saveEntry = () => {
-    if (!form.school || !form.degree) return;
+  // Update ref whenever form changes so parent can auto-save on navigation
+  useEffect(() => {
+    if (formRef) {
+      const hasData = form.school?.trim() || form.degree?.trim();
+      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
+      setHasUnsaved(hasData);
+    }
+  }, [form]);
+
+  const saveEntryInternal = () => {
+    if (!form.school || !form.degree) return false;
     onChange([...data, form]);
     setForm({ school: '', degree: '', field: '', graduationDate: '', gpa: '' });
+    setHasUnsaved(false);
+    if (formRef) formRef.current = null;
+    return true;
   };
 
-  const deleteEntry = (idx) => onChange(data.filter((_, i) => i !== idx));
+  const saveEntry = saveEntryInternal;
+
+  const deleteEntry = (idx) => {
+    if (window.confirm('Delete this education entry? This cannot be undone.')) {
+      onChange(data.filter((_, i) => i !== idx));
+    }
+  };
 
   return (
     <Card>
@@ -451,6 +494,11 @@ const EducationEditor = ({ data, onChange }) => {
       ))}
 
       <FormBox>
+        {hasUnsaved && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: 6, marginBottom: 12, fontSize: 12, color: '#ffc107' }}>
+            <span>●</span> Draft - click "Add Education" to save
+          </div>
+        )}
         <AutoSuggestInput label="School" category="schools" value={form.school} onChange={e => setForm({ ...form, school: e.target.value })} placeholder="University of Florida" />
         <AutoSuggestInput label="Degree" category="degrees" value={form.degree} onChange={e => setForm({ ...form, degree: e.target.value })} placeholder="Bachelor of Science" />
         <Input label="Field of Study" value={form.field} onChange={e => setForm({ ...form, field: e.target.value })} placeholder="Computer Science" />
@@ -758,21 +806,40 @@ const ClearancesEditor = ({ data, onChange }) => {
 };
 
 // UPDATED: Certifications now includes license number field
-const CertificationsEditor = ({ data, onChange }) => {
+const CertificationsEditor = ({ data, onChange, formRef }) => {
   const [form, setForm] = useState({ name: '', licenseNumber: '', issuer: '', date: '', expiration: '' });
+  const [hasUnsaved, setHasUnsaved] = useState(false);
 
-  const saveEntry = () => {
-    if (!form.name) return;
+  // Update ref whenever form changes so parent can auto-save on navigation
+  useEffect(() => {
+    if (formRef) {
+      const hasData = form.name?.trim();
+      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
+      setHasUnsaved(hasData);
+    }
+  }, [form]);
+
+  const saveEntryInternal = () => {
+    if (!form.name) return false;
     onChange([...data, form]);
     setForm({ name: '', licenseNumber: '', issuer: '', date: '', expiration: '' });
+    setHasUnsaved(false);
+    if (formRef) formRef.current = null;
+    return true;
   };
 
-  const deleteEntry = (idx) => onChange(data.filter((_, i) => i !== idx));
+  const saveEntry = saveEntryInternal;
+
+  const deleteEntry = (idx) => {
+    if (window.confirm('Delete this certification? This cannot be undone.')) {
+      onChange(data.filter((_, i) => i !== idx));
+    }
+  };
 
   return (
     <Card>
       <SectionTitle>Certifications / Licenses</SectionTitle>
-      
+
       {data.map((entry, idx) => (
         <EntryCard key={idx} onDelete={() => deleteEntry(idx)}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{entry.name}</div>
@@ -783,6 +850,11 @@ const CertificationsEditor = ({ data, onChange }) => {
       ))}
 
       <FormBox>
+        {hasUnsaved && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: 6, marginBottom: 12, fontSize: 12, color: '#ffc107' }}>
+            <span>●</span> Draft - click "Add Certification" to save
+          </div>
+        )}
         <Input label="Certification / License Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="A&P Mechanic License, AWS Solutions Architect, etc." />
         <Input label="License / Certificate Number (optional)" value={form.licenseNumber} onChange={e => setForm({ ...form, licenseNumber: e.target.value })} placeholder="1234567" />
         <Input label="Issuing Organization" value={form.issuer} onChange={e => setForm({ ...form, issuer: e.target.value })} placeholder="FAA, Amazon Web Services, etc." />
@@ -2268,6 +2340,13 @@ const HelpModal = ({ onClose }) => {
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
           <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.5.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Auto-save: Form data now saves automatically when navigating between sections<br/>
+            • Draft indicator: Shows when form has unsaved data<br/>
+            • Delete confirmations: Prevents accidental data loss<br/>
+            • Fixed: Multiple work experiences/certifications now persist correctly
+          </p>
+          <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.4.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
             • Clickable section navigation — jump directly to any section<br/>
             • Visual indicators: current (blue), completed (green ✓), pending (gray)
@@ -2337,6 +2416,26 @@ export default function RDResumeBuilder() {
   const [pendingSavedData, setPendingSavedData] = useState(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [jobDescription, setJobDescription] = useState(''); // Lifted for smart skill filtering
+
+  // Refs for auto-saving editor forms on navigation
+  const experienceFormRef = useRef(null);
+  const educationFormRef = useRef(null);
+  const certificationsFormRef = useRef(null);
+
+  // Auto-save any pending form data before navigation
+  const autoSavePendingForms = useCallback(() => {
+    let saved = false;
+    if (experienceFormRef.current?.save) {
+      if (experienceFormRef.current.save()) saved = true;
+    }
+    if (educationFormRef.current?.save) {
+      if (educationFormRef.current.save()) saved = true;
+    }
+    if (certificationsFormRef.current?.save) {
+      if (certificationsFormRef.current.save()) saved = true;
+    }
+    return saved;
+  }, []);
 
   // Validate contact info before proceeding
   const validateContact = () => {
@@ -2802,11 +2901,11 @@ export default function RDResumeBuilder() {
     switch (key) {
       case 'contact': return <ContactEditor data={data.contact} onChange={v => updateData('contact', v)} errors={contactErrors} />;
       case 'summary': return <SummaryEditor data={data.summary} onChange={v => updateData('summary', v)} />;
-      case 'experience': return <ExperienceEditor data={data.experience} onChange={v => updateData('experience', v)} />;
-      case 'education': return <EducationEditor data={data.education} onChange={v => updateData('education', v)} />;
+      case 'experience': return <ExperienceEditor data={data.experience} onChange={v => updateData('experience', v)} formRef={experienceFormRef} />;
+      case 'education': return <EducationEditor data={data.education} onChange={v => updateData('education', v)} formRef={educationFormRef} />;
       case 'skills': return <SkillsEditor data={data.skills} onChange={v => updateData('skills', v)} jobDescription={jobDescription} />;
       case 'clearances': return <ClearancesEditor data={data.clearances} onChange={v => updateData('clearances', v)} />;
-      case 'certifications': return <CertificationsEditor data={data.certifications} onChange={v => updateData('certifications', v)} />;
+      case 'certifications': return <CertificationsEditor data={data.certifications} onChange={v => updateData('certifications', v)} formRef={certificationsFormRef} />;
       case 'military': return <SimpleListEditor title="Military Service" data={data.military} onChange={v => updateData('military', v)} fields={[{ key: 'branch', label: 'Branch', placeholder: 'U.S. Army' }, { key: 'rank', label: 'Rank', placeholder: 'Sergeant' }, { key: 'dates', label: 'Dates', placeholder: '2010 - 2016' }]} />;
       case 'volunteer': return <SimpleListEditor title="Volunteer Experience" data={data.volunteer} onChange={v => updateData('volunteer', v)} fields={[{ key: 'organization', label: 'Organization', placeholder: 'Habitat for Humanity' }, { key: 'role', label: 'Role', placeholder: 'Coordinator' }, { key: 'dates', label: 'Dates', placeholder: '2020 - Present' }]} />;
       case 'publications': return <SimpleListEditor title="Publications" data={data.publications} onChange={v => updateData('publications', v)} fields={[{ key: 'title', label: 'Title', placeholder: 'Paper Title' }, { key: 'publication', label: 'Publication', placeholder: 'Journal Name' }, { key: 'date', label: 'Date', placeholder: 'March 2023' }]} />;
@@ -2897,6 +2996,8 @@ export default function RDResumeBuilder() {
                   <button
                     key={key}
                     onClick={() => {
+                      // Auto-save any pending form data before navigation
+                      autoSavePendingForms();
                       // Validate contact if leaving contact section
                       if (enabledSections[currentSection] === 'contact' && idx > currentSection && !validateContact()) {
                         return;
@@ -2927,8 +3028,10 @@ export default function RDResumeBuilder() {
             </div>
             {renderEditor()}
             <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-              <Button variant="secondary" style={{ flex: 1 }} onClick={() => currentSection === 0 ? setView('sections') : setCurrentSection(p => p - 1)}>← Back</Button>
+              <Button variant="secondary" style={{ flex: 1 }} onClick={() => { autoSavePendingForms(); currentSection === 0 ? setView('sections') : setCurrentSection(p => p - 1); }}>← Back</Button>
               <Button style={{ flex: 1 }} onClick={() => {
+                // Auto-save any pending form data before navigation
+                autoSavePendingForms();
                 // Validate contact section before proceeding
                 if (enabledSections[currentSection] === 'contact' && !validateContact()) {
                   return; // Don't proceed if validation fails
