@@ -367,16 +367,8 @@ const ExperienceEditor = ({ data, onChange, formRef }) => {
   const [form, setForm] = useState({ company: '', title: '', startDate: '', endDate: '', current: false, bullets: '' });
   const [hasUnsaved, setHasUnsaved] = useState(false);
 
-  // Update ref whenever form changes so parent can auto-save on navigation
-  useEffect(() => {
-    if (formRef) {
-      const hasData = form.company?.trim() || form.title?.trim();
-      formRef.current = hasData ? { form, editing, save: saveEntryInternal } : null;
-      setHasUnsaved(hasData);
-    }
-  }, [form, editing]);
-
-  const saveEntryInternal = () => {
+  // Define save function with useCallback to ensure stable reference
+  const saveEntryInternal = useCallback(() => {
     if (!form.company || !form.title) return false;
     const entry = { ...form, bullets: form.bullets.split('\n').filter(b => b.trim()) };
     if (editing !== null) {
@@ -391,7 +383,16 @@ const ExperienceEditor = ({ data, onChange, formRef }) => {
     setHasUnsaved(false);
     if (formRef) formRef.current = null;
     return true;
-  };
+  }, [form, editing, data, onChange, formRef]);
+
+  // Update ref whenever form changes so parent can auto-save on navigation
+  useEffect(() => {
+    if (formRef) {
+      const hasData = form.company?.trim() || form.title?.trim();
+      formRef.current = hasData ? { form, editing, save: saveEntryInternal } : null;
+      setHasUnsaved(!!hasData);
+    }
+  }, [form, editing, formRef, saveEntryInternal]);
 
   const saveEntry = saveEntryInternal;
 
@@ -455,23 +456,24 @@ const EducationEditor = ({ data, onChange, formRef }) => {
   const [form, setForm] = useState({ school: '', degree: '', field: '', graduationDate: '', gpa: '' });
   const [hasUnsaved, setHasUnsaved] = useState(false);
 
-  // Update ref whenever form changes so parent can auto-save on navigation
-  useEffect(() => {
-    if (formRef) {
-      const hasData = form.school?.trim() || form.degree?.trim();
-      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
-      setHasUnsaved(hasData);
-    }
-  }, [form]);
-
-  const saveEntryInternal = () => {
+  // Define save function with useCallback to ensure stable reference
+  const saveEntryInternal = useCallback(() => {
     if (!form.school || !form.degree) return false;
     onChange([...data, form]);
     setForm({ school: '', degree: '', field: '', graduationDate: '', gpa: '' });
     setHasUnsaved(false);
     if (formRef) formRef.current = null;
     return true;
-  };
+  }, [form, data, onChange, formRef]);
+
+  // Update ref whenever form changes so parent can auto-save on navigation
+  useEffect(() => {
+    if (formRef) {
+      const hasData = form.school?.trim() || form.degree?.trim();
+      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
+      setHasUnsaved(!!hasData);
+    }
+  }, [form, formRef, saveEntryInternal]);
 
   const saveEntry = saveEntryInternal;
 
@@ -810,23 +812,24 @@ const CertificationsEditor = ({ data, onChange, formRef }) => {
   const [form, setForm] = useState({ name: '', licenseNumber: '', issuer: '', date: '', expiration: '' });
   const [hasUnsaved, setHasUnsaved] = useState(false);
 
-  // Update ref whenever form changes so parent can auto-save on navigation
-  useEffect(() => {
-    if (formRef) {
-      const hasData = form.name?.trim();
-      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
-      setHasUnsaved(hasData);
-    }
-  }, [form]);
-
-  const saveEntryInternal = () => {
+  // Define save function with useCallback to ensure stable reference
+  const saveEntryInternal = useCallback(() => {
     if (!form.name) return false;
     onChange([...data, form]);
     setForm({ name: '', licenseNumber: '', issuer: '', date: '', expiration: '' });
     setHasUnsaved(false);
     if (formRef) formRef.current = null;
     return true;
-  };
+  }, [form, data, onChange, formRef]);
+
+  // Update ref whenever form changes so parent can auto-save on navigation
+  useEffect(() => {
+    if (formRef) {
+      const hasData = form.name?.trim();
+      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
+      setHasUnsaved(!!hasData);
+    }
+  }, [form, formRef, saveEntryInternal]);
 
   const saveEntry = saveEntryInternal;
 
