@@ -27,6 +27,7 @@ const DEFAULT_SECTIONS = {
   affiliations: { enabled: false, label: 'Professional Affiliations' },
   awards: { enabled: false, label: 'Awards / Honors' },
   references: { enabled: false, label: 'References' },
+  freeform: { enabled: false, label: 'Additional Information' },
 };
 
 const CLEARANCE_LEVELS = [
@@ -57,6 +58,7 @@ const DEFAULT_DATA = {
   affiliations: [],
   awards: [],
   references: { available: true, list: [] },
+  freeform: '',
 };
 
 // Reusable Components
@@ -354,10 +356,25 @@ const ContactEditor = ({ data, onChange, errors = {} }) => (
 const SummaryEditor = ({ data, onChange }) => (
   <Card>
     <SectionTitle>Summary / Objective</SectionTitle>
-    <TextArea 
-      value={data} 
-      onChange={e => onChange(e.target.value)} 
+    <TextArea
+      value={data}
+      onChange={e => onChange(e.target.value)}
       placeholder="Brief professional summary highlighting your key qualifications and career goals..."
+    />
+  </Card>
+);
+
+const FreeformEditor = ({ data, onChange }) => (
+  <Card>
+    <SectionTitle>Additional Information</SectionTitle>
+    <p style={{ fontSize: 13, color: '#aaa', marginBottom: 16 }}>
+      Use this section for any information that doesn't fit elsewhere. This content will appear as-is on your resume.
+    </p>
+    <TextArea
+      value={data}
+      onChange={e => onChange(e.target.value)}
+      placeholder="Add any additional information here: hobbies, interests, special achievements, availability, relocation preferences, or anything else you'd like to highlight..."
+      rows={8}
     />
   </Card>
 );
@@ -1258,6 +1275,13 @@ const ResumePreviewContent = ({ sections, data, scale = 1 }) => {
               </div>
             ))
           ) : null}
+        </div>
+      )}
+
+      {sections?.freeform?.enabled && data?.freeform && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 'bold', borderBottom: '1px solid #000', marginBottom: 8, paddingBottom: 2, textTransform: 'uppercase' }}>Additional Information</div>
+          <div style={{ whiteSpace: 'pre-wrap' }}>{data.freeform}</div>
         </div>
       )}
 
@@ -2995,6 +3019,7 @@ export default function RDResumeBuilder() {
       case 'affiliations': return <SimpleListEditor title="Affiliations" data={data.affiliations} onChange={v => updateData('affiliations', v)} fields={[{ key: 'organization', label: 'Organization', placeholder: 'IEEE' }, { key: 'role', label: 'Role', placeholder: 'Member' }, { key: 'years', label: 'Years', placeholder: '2020 - Present' }]} />;
       case 'awards': return <SimpleListEditor title="Awards" data={data.awards} onChange={v => updateData('awards', v)} fields={[{ key: 'award', label: 'Award', placeholder: 'Employee of Year' }, { key: 'issuer', label: 'Issuer', placeholder: 'ABC Corp' }, { key: 'date', label: 'Date', placeholder: '2022' }]} />;
       case 'references': return <ReferencesEditor data={data.references} onChange={v => updateData('references', v)} />;
+      case 'freeform': return <FreeformEditor data={data.freeform} onChange={v => updateData('freeform', v)} />;
       default: return <Card><p>Unknown section: {key}</p></Card>;
     }
   };
