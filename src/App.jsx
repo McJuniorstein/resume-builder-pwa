@@ -943,20 +943,50 @@ const SimpleListEditor = ({ title, data, onChange, fields }) => {
 };
 
 const ReferencesEditor = ({ data, onChange }) => {
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', title: '', company: '', phone: '', email: '', relationship: '' });
+  const [hasUnsaved, setHasUnsaved] = useState(false);
+
+  // Track unsaved changes
+  useEffect(() => {
+    const hasData = form.name?.trim();
+    setHasUnsaved(!!hasData);
+  }, [form]);
 
   const saveEntry = () => {
     if (!form.name) return;
-    onChange({ ...data, list: [...data.list, form] });
+    if (editing !== null) {
+      const updatedList = [...data.list];
+      updatedList[editing] = form;
+      onChange({ ...data, list: updatedList });
+    } else {
+      onChange({ ...data, list: [...data.list, form] });
+    }
     setForm({ name: '', title: '', company: '', phone: '', email: '', relationship: '' });
+    setEditing(null);
+    setHasUnsaved(false);
   };
 
-  const deleteEntry = (idx) => onChange({ ...data, list: data.list.filter((_, i) => i !== idx) });
+  const editEntry = (idx) => {
+    const entry = data.list[idx];
+    setForm({ ...entry });
+    setEditing(idx);
+  };
+
+  const deleteEntry = (idx) => {
+    if (window.confirm('Delete this reference? This cannot be undone.')) {
+      onChange({ ...data, list: data.list.filter((_, i) => i !== idx) });
+      if (editing === idx) {
+        setForm({ name: '', title: '', company: '', phone: '', email: '', relationship: '' });
+        setEditing(null);
+      }
+    }
+  };
 
   return (
     <Card>
       <SectionTitle>References</SectionTitle>
-      
+
       <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, cursor: 'pointer', marginBottom: 16 }}>
         <input type="checkbox" style={{ width: 22, height: 22, accentColor: '#4a90e2' }} checked={data.available} onChange={e => onChange({ ...data, available: e.target.checked })} />
         "Available upon request" (hides individual references)
@@ -965,7 +995,7 @@ const ReferencesEditor = ({ data, onChange }) => {
       {!data.available && (
         <>
           {data.list.map((entry, idx) => (
-            <EntryCard key={idx} onDelete={() => deleteEntry(idx)}>
+            <EntryCard key={idx} onEdit={() => editEntry(idx)} onDelete={() => deleteEntry(idx)}>
               <div style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{entry.name}</div>
               <div style={{ fontSize: 14, color: '#aaa' }}>{entry.title} at {entry.company}</div>
               <div style={{ fontSize: 14, color: '#aaa' }}>{entry.phone} • {entry.email}</div>
@@ -973,6 +1003,11 @@ const ReferencesEditor = ({ data, onChange }) => {
           ))}
 
           <FormBox>
+            {hasUnsaved && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: 6, marginBottom: 12, fontSize: 12, color: '#ffc107' }}>
+                <span>●</span> Draft - click "{editing !== null ? 'Update' : 'Add'} Reference" to save
+              </div>
+            )}
             <Input label="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Jane Smith" />
             <Input label="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Senior Manager" />
             <Input label="Company" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} placeholder="Tech Corp" />
@@ -985,7 +1020,7 @@ const ReferencesEditor = ({ data, onChange }) => {
               </div>
             </div>
             <Input label="Relationship" value={form.relationship} onChange={e => setForm({ ...form, relationship: e.target.value })} placeholder="Former Supervisor" />
-            <Button onClick={saveEntry} small>+ Add Reference</Button>
+            <Button onClick={saveEntry} small>{editing !== null ? 'Update' : '+ Add'} Reference</Button>
           </FormBox>
         </>
       )}
@@ -2380,8 +2415,9 @@ const HelpModal = ({ onClose }) => {
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
           <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.5.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
-            • Edit support: Education and Certifications can now be edited (not just deleted)<br/>
+            • Edit support: Education, Certifications, and References can now be edited<br/>
             • Mobile UX: Larger touch targets for edit/delete buttons (44px minimum)<br/>
+            • Delete confirmations added to References<br/>
             • Fixed: Stale closure bug in auto-save functions
           </p>
           <p style={{ marginBottom: 12 }}>
