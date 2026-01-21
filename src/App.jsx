@@ -317,11 +317,11 @@ const SectionTitle = ({ children }) => (
 
 const EntryCard = ({ children, onEdit, onDelete }) => (
   <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: 16, marginBottom: 12 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <div style={{ flex: 1 }}>{children}</div>
-      <div style={{ display: 'flex', gap: 4 }}>
-        {onEdit && <button onClick={onEdit} style={{ background: 'none', border: 'none', color: '#4a90e2', cursor: 'pointer', padding: '4px 8px', fontSize: 18 }}>✎</button>}
-        {onDelete && <button onClick={onDelete} style={{ background: 'none', border: 'none', color: '#e24a4a', cursor: 'pointer', padding: '4px 8px', fontSize: 20 }}>×</button>}
+      <div style={{ display: 'flex', gap: 8 }}>
+        {onEdit && <button onClick={onEdit} style={{ background: 'rgba(74, 144, 226, 0.15)', border: '1px solid rgba(74, 144, 226, 0.3)', color: '#4a90e2', cursor: 'pointer', padding: '8px 12px', fontSize: 16, borderRadius: 8, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✎</button>}
+        {onDelete && <button onClick={onDelete} style={{ background: 'rgba(226, 74, 74, 0.15)', border: '1px solid rgba(226, 74, 74, 0.3)', color: '#e24a4a', cursor: 'pointer', padding: '8px 12px', fontSize: 18, borderRadius: 8, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>}
       </div>
     </div>
   </div>
@@ -453,42 +453,60 @@ const ExperienceEditor = ({ data, onChange, formRef }) => {
 };
 
 const EducationEditor = ({ data, onChange, formRef }) => {
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ school: '', degree: '', field: '', graduationDate: '', gpa: '' });
   const [hasUnsaved, setHasUnsaved] = useState(false);
 
   // Define save function with useCallback to ensure stable reference
   const saveEntryInternal = useCallback(() => {
     if (!form.school || !form.degree) return false;
-    onChange([...data, form]);
+    if (editing !== null) {
+      const updated = [...data];
+      updated[editing] = form;
+      onChange(updated);
+    } else {
+      onChange([...data, form]);
+    }
     setForm({ school: '', degree: '', field: '', graduationDate: '', gpa: '' });
+    setEditing(null);
     setHasUnsaved(false);
     if (formRef) formRef.current = null;
     return true;
-  }, [form, data, onChange, formRef]);
+  }, [form, editing, data, onChange, formRef]);
 
   // Update ref whenever form changes so parent can auto-save on navigation
   useEffect(() => {
     if (formRef) {
       const hasData = form.school?.trim() || form.degree?.trim();
-      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
+      formRef.current = hasData ? { form, editing, save: saveEntryInternal } : null;
       setHasUnsaved(!!hasData);
     }
-  }, [form, formRef, saveEntryInternal]);
+  }, [form, editing, formRef, saveEntryInternal]);
 
   const saveEntry = saveEntryInternal;
+
+  const editEntry = (idx) => {
+    const entry = data[idx];
+    setForm({ ...entry });
+    setEditing(idx);
+  };
 
   const deleteEntry = (idx) => {
     if (window.confirm('Delete this education entry? This cannot be undone.')) {
       onChange(data.filter((_, i) => i !== idx));
+      if (editing === idx) {
+        setForm({ school: '', degree: '', field: '', graduationDate: '', gpa: '' });
+        setEditing(null);
+      }
     }
   };
 
   return (
     <Card>
       <SectionTitle>Education</SectionTitle>
-      
+
       {data.map((entry, idx) => (
-        <EntryCard key={idx} onDelete={() => deleteEntry(idx)}>
+        <EntryCard key={idx} onEdit={() => editEntry(idx)} onDelete={() => deleteEntry(idx)}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{entry.degree} {entry.field && `in ${entry.field}`}</div>
           <div style={{ fontSize: 14, color: '#aaa' }}>{entry.school}</div>
           <div style={{ fontSize: 14, color: '#aaa' }}>{entry.graduationDate} {entry.gpa && `• GPA: ${entry.gpa}`}</div>
@@ -498,7 +516,7 @@ const EducationEditor = ({ data, onChange, formRef }) => {
       <FormBox>
         {hasUnsaved && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: 6, marginBottom: 12, fontSize: 12, color: '#ffc107' }}>
-            <span>●</span> Draft - click "Add Education" to save
+            <span>●</span> Draft - click "{editing !== null ? 'Update' : 'Add'} Education" to save
           </div>
         )}
         <AutoSuggestInput label="School" category="schools" value={form.school} onChange={e => setForm({ ...form, school: e.target.value })} placeholder="University of Florida" />
@@ -512,7 +530,7 @@ const EducationEditor = ({ data, onChange, formRef }) => {
             <Input label="GPA (optional)" value={form.gpa} onChange={e => setForm({ ...form, gpa: e.target.value })} placeholder="3.8" />
           </div>
         </div>
-        <Button onClick={saveEntry} small>Add Education</Button>
+        <Button onClick={saveEntry} small>{editing !== null ? 'Update' : 'Add'} Education</Button>
       </FormBox>
     </Card>
   );
@@ -807,35 +825,53 @@ const ClearancesEditor = ({ data, onChange }) => {
   );
 };
 
-// UPDATED: Certifications now includes license number field
+// UPDATED: Certifications now includes license number field and edit support
 const CertificationsEditor = ({ data, onChange, formRef }) => {
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', licenseNumber: '', issuer: '', date: '', expiration: '' });
   const [hasUnsaved, setHasUnsaved] = useState(false);
 
   // Define save function with useCallback to ensure stable reference
   const saveEntryInternal = useCallback(() => {
     if (!form.name) return false;
-    onChange([...data, form]);
+    if (editing !== null) {
+      const updated = [...data];
+      updated[editing] = form;
+      onChange(updated);
+    } else {
+      onChange([...data, form]);
+    }
     setForm({ name: '', licenseNumber: '', issuer: '', date: '', expiration: '' });
+    setEditing(null);
     setHasUnsaved(false);
     if (formRef) formRef.current = null;
     return true;
-  }, [form, data, onChange, formRef]);
+  }, [form, editing, data, onChange, formRef]);
 
   // Update ref whenever form changes so parent can auto-save on navigation
   useEffect(() => {
     if (formRef) {
       const hasData = form.name?.trim();
-      formRef.current = hasData ? { form, save: saveEntryInternal } : null;
+      formRef.current = hasData ? { form, editing, save: saveEntryInternal } : null;
       setHasUnsaved(!!hasData);
     }
-  }, [form, formRef, saveEntryInternal]);
+  }, [form, editing, formRef, saveEntryInternal]);
 
   const saveEntry = saveEntryInternal;
+
+  const editEntry = (idx) => {
+    const entry = data[idx];
+    setForm({ ...entry });
+    setEditing(idx);
+  };
 
   const deleteEntry = (idx) => {
     if (window.confirm('Delete this certification? This cannot be undone.')) {
       onChange(data.filter((_, i) => i !== idx));
+      if (editing === idx) {
+        setForm({ name: '', licenseNumber: '', issuer: '', date: '', expiration: '' });
+        setEditing(null);
+      }
     }
   };
 
@@ -844,7 +880,7 @@ const CertificationsEditor = ({ data, onChange, formRef }) => {
       <SectionTitle>Certifications / Licenses</SectionTitle>
 
       {data.map((entry, idx) => (
-        <EntryCard key={idx} onDelete={() => deleteEntry(idx)}>
+        <EntryCard key={idx} onEdit={() => editEntry(idx)} onDelete={() => deleteEntry(idx)}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>{entry.name}</div>
           {entry.licenseNumber && <div style={{ fontSize: 14, color: '#8bb8e8' }}>License #: {entry.licenseNumber}</div>}
           {entry.issuer && <div style={{ fontSize: 14, color: '#aaa' }}>{entry.issuer}</div>}
@@ -855,7 +891,7 @@ const CertificationsEditor = ({ data, onChange, formRef }) => {
       <FormBox>
         {hasUnsaved && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', background: 'rgba(255, 193, 7, 0.15)', border: '1px solid rgba(255, 193, 7, 0.3)', borderRadius: 6, marginBottom: 12, fontSize: 12, color: '#ffc107' }}>
-            <span>●</span> Draft - click "Add Certification" to save
+            <span>●</span> Draft - click "{editing !== null ? 'Update' : 'Add'} Certification" to save
           </div>
         )}
         <Input label="Certification / License Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="A&P Mechanic License, AWS Solutions Architect, etc." />
@@ -869,7 +905,7 @@ const CertificationsEditor = ({ data, onChange, formRef }) => {
             <MonthInput label="Expiration (optional)" value={form.expiration} onChange={e => setForm({ ...form, expiration: e.target.value })} />
           </div>
         </div>
-        <Button onClick={saveEntry} small>+ Add Certification / License</Button>
+        <Button onClick={saveEntry} small>{editing !== null ? 'Update' : '+ Add'} Certification / License</Button>
       </FormBox>
     </Card>
   );
@@ -2342,6 +2378,12 @@ const HelpModal = ({ onClose }) => {
 
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
+          <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.5.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Edit support: Education and Certifications can now be edited (not just deleted)<br/>
+            • Mobile UX: Larger touch targets for edit/delete buttons (44px minimum)<br/>
+            • Fixed: Stale closure bug in auto-save functions
+          </p>
           <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.5.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
             • Auto-save: Form data now saves automatically when navigating between sections<br/>
