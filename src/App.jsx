@@ -10,6 +10,7 @@ const DEVICE_STORAGE_KEY = 'rd_resume_device_files';
 const INSTALL_DISMISSED_KEY = 'rd_resume_install_dismissed';
 const COVER_LETTERS_KEY = 'rd_resume_cover_letters';
 const SUGGESTIONS_KEY = 'rd_resume_suggestions';
+const SKILLS_INDUSTRY_KEY = 'skillsIndustryMode';
 
 const DEFAULT_SECTIONS = {
   contact: { enabled: true, label: 'Contact Information' },
@@ -594,6 +595,18 @@ const SKILL_SUGGESTIONS = {
   ]
 };
 
+// Industry-specific quick-add suggestions
+const QUICK_ADD_SUGGESTIONS = {
+  tech: {
+    technical: ['Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C#'],
+    industry: ['Agile/Scrum', 'Kanban', 'Waterfall', 'Lean', 'Six Sigma', 'Microservices Architecture']
+  },
+  aviation: {
+    technical: ['Aircraft Systems', 'Avionics', 'NDT/NDI', 'Sheet Metal', 'Composites', 'Flight Controls'],
+    industry: ['FAA Regulations', 'EASA Compliance', 'AS9100', 'Part 121', 'Part 145', 'SMS (Safety Management)']
+  }
+};
+
 // Aviation keywords for smart filtering (170 curated from 1,664 total)
 const AVIATION_KEYWORDS = [
   // Certifications
@@ -640,7 +653,7 @@ const detectAviationContext = (text) => {
 };
 
 // Individual skill section - uncontrolled input to prevent focus loss
-const SkillSection = React.memo(({ category, label, skills, allSuggestions, onAdd, onRemove, isLast }) => {
+const SkillSection = React.memo(({ category, label, skills, allSuggestions, quickAddOverride, onAdd, onRemove, isLast }) => {
   const inputRef = useRef(null);
   const [debouncedInput, setDebouncedInput] = useState('');
   const debounceRef = useRef(null);
@@ -664,10 +677,12 @@ const SkillSection = React.memo(({ category, label, skills, allSuggestions, onAd
     return [...prefixMatches, ...containsMatches].slice(0, 5);
   }, [debouncedInput, allSuggestions, existingLower]);
 
+  // Use quickAddOverride if provided, otherwise use first 6 from allSuggestions
   const quickPicks = useMemo(() => {
     if (debouncedInput.trim()) return [];
-    return allSuggestions.filter(s => !existingLower.includes(s.toLowerCase())).slice(0, 6);
-  }, [debouncedInput, allSuggestions, existingLower]);
+    const source = quickAddOverride || allSuggestions;
+    return source.filter(s => !existingLower.includes(s.toLowerCase())).slice(0, 6);
+  }, [debouncedInput, allSuggestions, quickAddOverride, existingLower]);
 
   const handleAdd = useCallback((value) => {
     const trimmed = (value || '').trim();
@@ -745,14 +760,36 @@ const SkillSection = React.memo(({ category, label, skills, allSuggestions, onAd
 });
 
 // Skills editor - each section is isolated to prevent focus loss
-const SkillsEditor = ({ data, onChange, jobDescription }) => {
-  // Detect aviation context and merge aviation keywords into industry suggestions
-  const isAviationJob = detectAviationContext(jobDescription);
+const SkillsEditor = ({ data, onChange, jobDescription, industryMode, onIndustryModeChange }) => {
+  // Use manual toggle or auto-detect aviation context from job description
+  const isAviationMode = industryMode === 'aviation' || detectAviationContext(jobDescription);
+
+  // Get technical suggestions based on industry mode
+  const technicalSuggestions = useMemo(() => {
+    if (isAviationMode) {
+      // Prioritize aviation technical skills, then add general tech skills
+      const aviationTech = [...QUICK_ADD_SUGGESTIONS.aviation.technical, ...AVIATION_KEYWORDS.filter(k =>
+        ['Aircraft Systems', 'Avionics', 'NDT', 'Sheet Metal', 'Composites', 'Flight Controls', 'Airframe', 'Powerplant',
+         'Hydraulic Systems', 'Pneumatic Systems', 'Fuel Systems', 'Landing Gear', 'Electrical Systems'].some(t => k.includes(t))
+      )];
+      const combined = [...aviationTech, ...SKILL_SUGGESTIONS.technical];
+      const seen = new Set();
+      return combined.filter(s => {
+        const lower = s.toLowerCase();
+        if (seen.has(lower)) return false;
+        seen.add(lower);
+        return true;
+      });
+    }
+    return SKILL_SUGGESTIONS.technical;
+  }, [isAviationMode]);
+
+  // Get industry suggestions based on industry mode
   const industrySuggestions = useMemo(() => {
-    if (isAviationJob) {
-      // Merge aviation keywords (prioritized) with general industry skills
-      const combined = [...AVIATION_KEYWORDS, ...SKILL_SUGGESTIONS.industry];
-      // Remove duplicates
+    if (isAviationMode) {
+      // Prioritize aviation industry skills, then add general industry skills
+      const aviationIndustry = [...QUICK_ADD_SUGGESTIONS.aviation.industry, ...AVIATION_KEYWORDS];
+      const combined = [...aviationIndustry, ...SKILL_SUGGESTIONS.industry];
       const seen = new Set();
       return combined.filter(s => {
         const lower = s.toLowerCase();
@@ -762,21 +799,71 @@ const SkillsEditor = ({ data, onChange, jobDescription }) => {
       });
     }
     return SKILL_SUGGESTIONS.industry;
-  }, [isAviationJob]);
+  }, [isAviationMode]);
+
+  // Get quick-add suggestions based on industry mode
+  const quickAddTechnical = isAviationMode ? QUICK_ADD_SUGGESTIONS.aviation.technical : QUICK_ADD_SUGGESTIONS.tech.technical;
+  const quickAddIndustry = isAviationMode ? QUICK_ADD_SUGGESTIONS.aviation.industry : QUICK_ADD_SUGGESTIONS.tech.industry;
 
   return (
     <Card>
       <SectionTitle>Skills</SectionTitle>
-      {isAviationJob && (
+
+      {/* Industry Toggle */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+        <div style={{
+          display: 'inline-flex',
+          background: 'rgba(0,0,0,0.3)',
+          borderRadius: 20,
+          padding: 3,
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <button
+            onClick={() => onIndustryModeChange('tech')}
+            style={{
+              padding: '8px 20px',
+              fontSize: 13,
+              fontWeight: industryMode === 'tech' ? 600 : 400,
+              background: industryMode === 'tech' ? '#4a90e2' : 'transparent',
+              border: 'none',
+              borderRadius: 17,
+              color: industryMode === 'tech' ? '#fff' : '#888',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            Tech
+          </button>
+          <button
+            onClick={() => onIndustryModeChange('aviation')}
+            style={{
+              padding: '8px 20px',
+              fontSize: 13,
+              fontWeight: industryMode === 'aviation' ? 600 : 400,
+              background: industryMode === 'aviation' ? '#4a90e2' : 'transparent',
+              border: 'none',
+              borderRadius: 17,
+              color: industryMode === 'aviation' ? '#fff' : '#888',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            Aviation
+          </button>
+        </div>
+      </div>
+
+      {isAviationMode && (
         <div style={{ background: 'rgba(74, 226, 74, 0.1)', border: '1px solid rgba(74, 226, 74, 0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 16, fontSize: 13, color: '#7be87b' }}>
-          ✈️ Aviation job detected — showing 170+ aviation-specific skills
+          ✈️ Aviation mode — showing 170+ aviation-specific skills
         </div>
       )}
       <SkillSection
         category="technical"
         label="Technical Skills"
         skills={data.technical}
-        allSuggestions={SKILL_SUGGESTIONS.technical}
+        allSuggestions={technicalSuggestions}
+        quickAddOverride={quickAddTechnical}
         onAdd={(skill) => onChange({ ...data, technical: [...data.technical, skill] })}
         onRemove={(idx) => onChange({ ...data, technical: data.technical.filter((_, i) => i !== idx) })}
       />
@@ -790,9 +877,10 @@ const SkillsEditor = ({ data, onChange, jobDescription }) => {
       />
       <SkillSection
         category="industry"
-        label={isAviationJob ? "Industry / Aviation Skills" : "Industry / Domain Skills"}
+        label={isAviationMode ? "Industry / Aviation Skills" : "Industry / Domain Skills"}
         skills={data.industry}
         allSuggestions={industrySuggestions}
+        quickAddOverride={quickAddIndustry}
         onAdd={(skill) => onChange({ ...data, industry: [...data.industry, skill] })}
         onRemove={(idx) => onChange({ ...data, industry: data.industry.filter((_, i) => i !== idx) })}
         isLast
@@ -2438,6 +2526,14 @@ const HelpModal = ({ onClose }) => {
       <Collapsible title="Changelog">
         <div style={{ borderLeft: '2px solid #4a90e2', paddingLeft: 12 }}>
           <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: '#4a90e2' }}>v1.6.0</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
+            • Industry toggle: Switch between Tech and Aviation skill sets<br/>
+            • Quick-add buttons change based on selected industry<br/>
+            • Type-ahead suggestions filter by industry context<br/>
+            • Toggle state persists in localStorage<br/>
+            • New "Additional Information" freeform section
+          </p>
+          <p style={{ marginBottom: 12 }}>
             <strong style={{ color: '#4a90e2' }}>v1.5.1</strong> <span style={{ color: '#666', fontSize: 12 }}>Jan 2026</span><br/>
             • Edit support: Education, Certifications, and References can now be edited<br/>
             • Mobile UX: Larger touch targets for edit/delete buttons (44px minimum)<br/>
@@ -2521,6 +2617,18 @@ export default function RDResumeBuilder() {
   const [pendingSavedData, setPendingSavedData] = useState(null);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [jobDescription, setJobDescription] = useState(''); // Lifted for smart skill filtering
+  const [skillsIndustryMode, setSkillsIndustryMode] = useState(() => {
+    try {
+      return localStorage.getItem(SKILLS_INDUSTRY_KEY) || 'tech';
+    } catch { return 'tech'; }
+  });
+
+  // Persist skills industry mode to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(SKILLS_INDUSTRY_KEY, skillsIndustryMode);
+    } catch { /* ignore */ }
+  }, [skillsIndustryMode]);
 
   // Refs for auto-saving editor forms on navigation
   const experienceFormRef = useRef(null);
@@ -3008,7 +3116,7 @@ export default function RDResumeBuilder() {
       case 'summary': return <SummaryEditor data={data.summary} onChange={v => updateData('summary', v)} />;
       case 'experience': return <ExperienceEditor data={data.experience} onChange={v => updateData('experience', v)} formRef={experienceFormRef} />;
       case 'education': return <EducationEditor data={data.education} onChange={v => updateData('education', v)} formRef={educationFormRef} />;
-      case 'skills': return <SkillsEditor data={data.skills} onChange={v => updateData('skills', v)} jobDescription={jobDescription} />;
+      case 'skills': return <SkillsEditor data={data.skills} onChange={v => updateData('skills', v)} jobDescription={jobDescription} industryMode={skillsIndustryMode} onIndustryModeChange={setSkillsIndustryMode} />;
       case 'clearances': return <ClearancesEditor data={data.clearances} onChange={v => updateData('clearances', v)} />;
       case 'certifications': return <CertificationsEditor data={data.certifications} onChange={v => updateData('certifications', v)} formRef={certificationsFormRef} />;
       case 'military': return <SimpleListEditor title="Military Service" data={data.military} onChange={v => updateData('military', v)} fields={[{ key: 'branch', label: 'Branch', placeholder: 'U.S. Army' }, { key: 'rank', label: 'Rank', placeholder: 'Sergeant' }, { key: 'dates', label: 'Dates', placeholder: '2010 - 2016' }]} />;
